@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { StorageService } from '../services/StorageService';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    const records = new StorageService().load();
+
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
 
     this.add
@@ -53,11 +56,30 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        580,
+        `최고 점수 ${records.highScore}  ·  최장 생존 ${this.formatTime(records.longestSurvivalSeconds)}  ·  최대 처치 ${records.maxKills}  ·  최고 콤보 x${records.maxCombo}`,
+        {
+          color: '#cfc4dc',
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: '20px',
+        },
+      )
+      .setOrigin(0.5);
+
     this.input.keyboard?.once('keydown-ENTER', () => this.startGame());
     buttonText.setDepth(button.depth + 1);
   }
 
   private startGame(): void {
     this.scene.start('GameScene');
+  }
+
+  private formatTime(totalSeconds: number): string {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 }

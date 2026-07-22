@@ -7,6 +7,8 @@ export class Hud {
   private readonly levelText: Phaser.GameObjects.Text;
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
+  private readonly scoreText: Phaser.GameObjects.Text;
+  private readonly comboText: Phaser.GameObjects.Text;
   private readonly waveText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
@@ -21,7 +23,20 @@ export class Hud {
     this.hpText = scene.add.text(28, 18, '', textStyle).setDepth(51);
     this.levelText = scene.add.text(310, 18, '', textStyle).setDepth(51);
     this.timerText = scene.add.text(GAME_WIDTH / 2, 18, '', textStyle).setOrigin(0.5, 0).setDepth(51);
-    this.killText = scene.add.text(GAME_WIDTH - 28, 18, '', textStyle).setOrigin(1, 0).setDepth(51);
+    this.killText = scene.add.text(GAME_WIDTH - 250, 18, '', textStyle).setOrigin(1, 0).setDepth(51);
+    this.scoreText = scene.add.text(GAME_WIDTH - 24, 18, '', textStyle).setOrigin(1, 0).setDepth(51);
+    this.comboText = scene.add
+      .text(GAME_WIDTH / 2, 88, '', {
+        color: '#fff36b',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '34px',
+        fontStyle: 'bold',
+        stroke: '#5e274e',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setDepth(51)
+      .setVisible(false);
     this.waveText = scene.add
       .text(GAME_WIDTH - 24, 680, '', {
         color: '#ff9bea',
@@ -49,12 +64,16 @@ export class Hud {
     requiredExperience: number,
     survivalSeconds: number,
     killCount: number,
+    currentCombo: number,
+    currentScore: number,
     waveName: string,
   ): void {
     this.hpText.setText(`멘탈 ${Math.ceil(hp)} / ${maxHp}`);
     this.levelText.setText(`Lv.${level}  EXP ${experience} / ${requiredExperience}`);
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치 ${killCount}`);
+    this.scoreText.setText(`점수 ${currentScore}`);
+    this.comboText.setText(`COMBO x${currentCombo}`).setVisible(currentCombo >= 2);
     this.waveText.setText(`현재 상황: ${waveName}`);
   }
 

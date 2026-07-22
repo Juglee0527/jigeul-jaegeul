@@ -7,6 +7,7 @@ import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { LevelSystem } from '../systems/LevelSystem';
 import { EnemySpawner } from '../systems/EnemySpawner';
+import { ScoreSystem } from '../systems/ScoreSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import type { WaveConfig } from '../types/game';
@@ -24,12 +25,12 @@ export class GameScene extends Phaser.Scene {
   private levelSystem!: LevelSystem;
   private upgradeSystem!: UpgradeSystem;
   private waveSystem!: WaveSystem;
+  private scoreSystem!: ScoreSystem;
   private enemySpawner!: EnemySpawner;
   private currentWave!: WaveConfig;
   private activePlayTimeMs = 0;
   private nextAttackAt = 0;
   private nextSpawnAt = 0;
-  private killCount = 0;
   private gameEnded = false;
   private choosingUpgrade = false;
 
@@ -39,7 +40,6 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.physics.resume();
-    this.killCount = 0;
     this.gameEnded = false;
     this.choosingUpgrade = false;
     this.activePlayTimeMs = 0;
@@ -56,6 +56,7 @@ export class GameScene extends Phaser.Scene {
     this.levelSystem = new LevelSystem();
     this.upgradeSystem = new UpgradeSystem();
     this.waveSystem = new WaveSystem();
+    this.scoreSystem = new ScoreSystem();
     this.enemySpawner = new EnemySpawner(this, this.enemies);
     this.currentWave = this.waveSystem.getCurrentWave(0);
     this.hud = new Hud(this);
@@ -87,6 +88,7 @@ export class GameScene extends Phaser.Scene {
     this.player.update(delta);
     const survivalSeconds = this.activePlayTimeMs / 1000;
     this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
+    this.scoreSystem.update(this.activePlayTimeMs);
 
     if (this.activePlayTimeMs >= this.nextSpawnAt) {
       this.enemySpawner.spawn(this.currentWave);
@@ -122,7 +124,9 @@ export class GameScene extends Phaser.Scene {
       this.levelSystem.experience,
       this.levelSystem.requiredExperience,
       survivalSeconds,
-      this.killCount,
+      this.scoreSystem.killCount,
+      this.scoreSystem.currentCombo,
+      this.scoreSystem.getCurrentScore(survivalSeconds, this.levelSystem.level),
       this.currentWave.name,
     );
 
@@ -194,7 +198,7 @@ export class GameScene extends Phaser.Scene {
     const damage = projectile.damage;
     projectile.destroy();
     if (enemy.takeDamage(damage)) {
-      this.killCount += 1;
+      this.scoreSystem.registerKill(this.activePlayTimeMs);
       if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
         this.experienceGems.add(
           new ExperienceGem(this, dropX, dropY, enemy.experienceValue),
@@ -251,11 +255,10 @@ export class GameScene extends Phaser.Scene {
     this.player.setTint(0x555555);
 
     this.time.delayedCall(350, () => {
-      this.scene.start('ResultScene', {
-        survivalSeconds,
-        killCount: this.killCount,
-        level: this.levelSystem.level,
-      });
+      this.scene.start(
+        'ResultScene',
+        this.scoreSystem.createResult(survivalSeconds, this.levelSystem.level),
+      );
     });
   }
 }

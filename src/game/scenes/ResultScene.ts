@@ -1,10 +1,18 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { StorageService } from '../services/StorageService';
+import { calculateFinalScore } from '../systems/ScoreSystem';
 import type { GameResult } from '../types/game';
 
 export class ResultScene extends Phaser.Scene {
-  private result: GameResult = { survivalSeconds: 0, killCount: 0, level: 1 };
+  private result: GameResult = {
+    survivalSeconds: 0,
+    killCount: 0,
+    level: 1,
+    maxCombo: 0,
+    bossKillCount: 0,
+  };
 
   constructor() {
     super('ResultScene');
@@ -15,10 +23,13 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(): void {
+    const finalScore = calculateFinalScore(this.result);
+    const recordUpdate = new StorageService().updateRecords(this.result, finalScore);
+
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
 
     this.add
-      .text(GAME_WIDTH / 2, 155, '긁혔습니다.', {
+      .text(GAME_WIDTH / 2, 92, '긁혔습니다.', {
         color: '#ff5c72',
         fontFamily: 'system-ui, sans-serif',
         fontSize: '68px',
@@ -29,8 +40,8 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(
         GAME_WIDTH / 2,
-        300,
-        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}`,
+        255,
+        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}\n최고 콤보   x${this.result.maxCombo}`,
         {
           align: 'center',
           color: '#ffffff',
@@ -41,10 +52,35 @@ export class ResultScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    this.createButton(GAME_WIDTH / 2 - 180, 500, '다시 하기', () => {
+    this.add
+      .text(GAME_WIDTH / 2, 430, `최종 점수  ${finalScore}`, {
+        color: '#fff36b',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '40px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        478,
+        recordUpdate.isNewHighScore
+          ? '최고 기록 갱신!'
+          : `최고 기록  ${recordUpdate.data.highScore}`,
+        {
+          color: recordUpdate.isNewHighScore ? '#ff4fd8' : '#aaa0bb',
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: '22px',
+          fontStyle: recordUpdate.isNewHighScore ? 'bold' : 'normal',
+        },
+      )
+      .setOrigin(0.5);
+
+    this.createButton(GAME_WIDTH / 2 - 180, 590, '다시 하기', () => {
       this.scene.start('GameScene');
     });
-    this.createButton(GAME_WIDTH / 2 + 180, 500, '메인 화면', () => {
+    this.createButton(GAME_WIDTH / 2 + 180, 590, '메인 화면', () => {
       this.scene.start('MenuScene');
     });
 

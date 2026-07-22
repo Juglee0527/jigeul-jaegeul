@@ -2,6 +2,30 @@ export interface GameResult {
   survivalSeconds: number;
   killCount: number;
   level: number;
+  maxCombo: number;
+  bossKillCount: number;
+}
+
+export interface DailyRecord {
+  date: string;
+  score: number;
+  survivalSeconds: number;
+  kills: number;
+  level: number;
+}
+
+export interface GameSettings {
+  soundEnabled: boolean;
+}
+
+export interface SavedGameData {
+  version: 1;
+  highScore: number;
+  longestSurvivalSeconds: number;
+  maxKills: number;
+  maxCombo: number;
+  dailyRecords: Record<string, DailyRecord>;
+  settings: GameSettings;
 }
 
 export interface PlayerStats {
