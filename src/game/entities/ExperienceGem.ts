@@ -5,10 +5,12 @@ import type { Player } from './Player';
 const ATTRACTION_SPEED = 420;
 
 export class ExperienceGem extends Phaser.Physics.Arcade.Sprite {
-  readonly value = 2;
+  readonly value: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, value: number) {
     super(scene, x, y, 'experience');
+
+    this.value = value;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);

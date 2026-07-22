@@ -6,11 +6,13 @@ import { ExperienceGem } from '../entities/ExperienceGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { LevelSystem } from '../systems/LevelSystem';
+import { EnemySpawner } from '../systems/EnemySpawner';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
+import { WaveSystem } from '../systems/WaveSystem';
+import type { WaveConfig } from '../types/game';
 import { Hud } from '../ui/Hud';
 
-const SPAWN_INTERVAL_MS = 850;
-const PLAYER_CONTACT_DAMAGE = 10;
+const MAX_EXPERIENCE_GEMS = 180;
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 
 export class GameScene extends Phaser.Scene {
@@ -21,8 +23,12 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private levelSystem!: LevelSystem;
   private upgradeSystem!: UpgradeSystem;
+  private waveSystem!: WaveSystem;
+  private enemySpawner!: EnemySpawner;
+  private currentWave!: WaveConfig;
   private activePlayTimeMs = 0;
   private nextAttackAt = 0;
+  private nextSpawnAt = 0;
   private killCount = 0;
   private gameEnded = false;
   private choosingUpgrade = false;
@@ -38,6 +44,7 @@ export class GameScene extends Phaser.Scene {
     this.choosingUpgrade = false;
     this.activePlayTimeMs = 0;
     this.nextAttackAt = 0;
+    this.nextSpawnAt = 0;
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
     this.add.grid(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 80, 80, 0x100b18, 1, 0x2d1c3e, 0.35);
@@ -48,6 +55,9 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.levelSystem = new LevelSystem();
     this.upgradeSystem = new UpgradeSystem();
+    this.waveSystem = new WaveSystem();
+    this.enemySpawner = new EnemySpawner(this, this.enemies);
+    this.currentWave = this.waveSystem.getCurrentWave(0);
     this.hud = new Hud(this);
 
     this.physics.add.overlap(
@@ -66,26 +76,31 @@ export class GameScene extends Phaser.Scene {
       this,
     );
 
-    this.time.addEvent({
-      delay: SPAWN_INTERVAL_MS,
-      callback: this.spawnEnemy,
-      callbackScope: this,
-      loop: true,
-    });
-    this.spawnEnemy();
   }
 
-  update(time: number, delta: number): void {
+  update(_time: number, delta: number): void {
     if (this.gameEnded) {
       return;
     }
 
     this.activePlayTimeMs += delta;
     this.player.update(delta);
+    const survivalSeconds = this.activePlayTimeMs / 1000;
+    this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
+
+    if (this.activePlayTimeMs >= this.nextSpawnAt) {
+      this.enemySpawner.spawn(this.currentWave);
+      this.nextSpawnAt = this.activePlayTimeMs + this.currentWave.spawnInterval;
+    }
+
     this.enemies.getChildren().forEach((gameObject) => {
       const enemy = gameObject as Enemy;
       if (enemy.active) {
-        enemy.chase(this.player, this.player.stats.enemySpeedMultiplier);
+        enemy.updateBehavior(
+          this.activePlayTimeMs,
+          this.player,
+          this.player.stats.enemySpeedMultiplier,
+        );
       }
     });
     this.experienceGems.getChildren().forEach((gameObject) => {
@@ -95,12 +110,11 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    if (time >= this.nextAttackAt) {
+    if (this.activePlayTimeMs >= this.nextAttackAt) {
       this.autoAttack();
-      this.nextAttackAt = time + this.player.stats.attackCooldown;
+      this.nextAttackAt = this.activePlayTimeMs + this.player.stats.attackCooldown;
     }
 
-    const survivalSeconds = this.activePlayTimeMs / 1000;
     this.hud.update(
       this.player.hp,
       this.player.stats.maxHp,
@@ -109,32 +123,12 @@ export class GameScene extends Phaser.Scene {
       this.levelSystem.requiredExperience,
       survivalSeconds,
       this.killCount,
+      this.currentWave.name,
     );
 
     if (this.player.hp <= 0) {
       this.endGame(survivalSeconds);
     }
-  }
-
-  private spawnEnemy(): void {
-    if (this.gameEnded || this.enemies.countActive(true) >= 60) {
-      return;
-    }
-
-    const margin = 28;
-    const side = Phaser.Math.Between(0, 3);
-    let x = margin;
-    let y = margin;
-
-    if (side === 0 || side === 1) {
-      x = side === 0 ? margin : GAME_WIDTH - margin;
-      y = Phaser.Math.Between(80, GAME_HEIGHT - margin);
-    } else {
-      x = Phaser.Math.Between(margin, GAME_WIDTH - margin);
-      y = side === 2 ? 80 : GAME_HEIGHT - margin;
-    }
-
-    this.enemies.add(new Enemy(this, x, y));
   }
 
   private autoAttack(): void {
@@ -201,7 +195,11 @@ export class GameScene extends Phaser.Scene {
     projectile.destroy();
     if (enemy.takeDamage(damage)) {
       this.killCount += 1;
-      this.experienceGems.add(new ExperienceGem(this, dropX, dropY));
+      if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
+        this.experienceGems.add(
+          new ExperienceGem(this, dropX, dropY, enemy.experienceValue),
+        );
+      }
     }
   }
 
@@ -224,9 +222,10 @@ export class GameScene extends Phaser.Scene {
 
   private handlePlayerHit(
     _playerObject: ArcadeCollisionObject,
-    _enemyObject: ArcadeCollisionObject,
+    enemyObject: ArcadeCollisionObject,
   ): void {
-    this.player.takeDamage(PLAYER_CONTACT_DAMAGE, this.time.now);
+    const enemy = enemyObject as Enemy;
+    this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs);
   }
 
   applyUpgrade(id: string): void {

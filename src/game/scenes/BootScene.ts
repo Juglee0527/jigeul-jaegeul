@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import { COLORS } from '../config/constants';
+import { ENEMY_DEFINITIONS } from '../config/enemies';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -9,9 +10,11 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.createCircleTexture('player', 24, COLORS.player);
-    this.createCircleTexture('enemy', 22, COLORS.enemy);
     this.createCircleTexture('projectile', 7, COLORS.projectile);
     this.createCircleTexture('experience', 10, 0x6dff8b);
+    ENEMY_DEFINITIONS.forEach((enemy) => {
+      this.createCircleTexture(`enemy-${enemy.id}`, enemy.radius, enemy.color);
+    });
 
     this.scene.start('MenuScene');
   }

@@ -164,6 +164,7 @@ interface SavedGameData {
 - 물리 그룹으로 적, 투사체, 경험치 아이템 관리
 - 화면에서 충분히 벗어난 투사체 제거
 - 적의 최대 수를 웨이브에 명시
+- 경험치 아이템은 동시에 최대 180개로 제한
 - 매 프레임 전체 적 배열 정렬 금지
 - 자동 공격 시 가장 가까운 대상은 단일 순회로 탐색
 - 경험치가 과도하면 가까운 아이템 병합 고려
@@ -200,4 +201,3 @@ export default defineConfig({
 ```
 
 `main` 브랜치 push 시 GitHub Actions가 의존성 설치, 빌드, `dist/` 업로드, Pages 배포를 수행한다. 배포 전 로컬에서 `npm run build`와 `npm run preview`로 경로 문제를 확인한다.
-

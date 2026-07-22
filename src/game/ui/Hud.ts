@@ -7,6 +7,7 @@ export class Hud {
   private readonly levelText: Phaser.GameObjects.Text;
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
+  private readonly waveText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -21,6 +22,15 @@ export class Hud {
     this.levelText = scene.add.text(310, 18, '', textStyle).setDepth(51);
     this.timerText = scene.add.text(GAME_WIDTH / 2, 18, '', textStyle).setOrigin(0.5, 0).setDepth(51);
     this.killText = scene.add.text(GAME_WIDTH - 28, 18, '', textStyle).setOrigin(1, 0).setDepth(51);
+    this.waveText = scene.add
+      .text(GAME_WIDTH - 24, 680, '', {
+        color: '#ff9bea',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '18px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(1, 0)
+      .setDepth(51);
 
     scene.add
       .text(24, 680, '이동: WASD / 방향키', {
@@ -39,11 +49,13 @@ export class Hud {
     requiredExperience: number,
     survivalSeconds: number,
     killCount: number,
+    waveName: string,
   ): void {
     this.hpText.setText(`멘탈 ${Math.ceil(hp)} / ${maxHp}`);
     this.levelText.setText(`Lv.${level}  EXP ${experience} / ${requiredExperience}`);
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치 ${killCount}`);
+    this.waveText.setText(`현재 상황: ${waveName}`);
   }
 
   private formatTime(totalSeconds: number): string {
