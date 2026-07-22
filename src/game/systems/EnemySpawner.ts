@@ -20,12 +20,14 @@ export class EnemySpawner {
     for (let index = 0; index < spawnCount; index += 1) {
       const definition = getEnemyDefinition(this.weightedPick(wave.enemies));
       const position = this.getSpawnPosition(definition.radius);
+      const message = this.random.pick(definition.messages);
       this.group.add(
         new Enemy(
           this.scene,
           position.x,
           position.y,
           definition,
+          message,
           wave.enemyHpMultiplier,
           wave.enemySpeedMultiplier,
         ),

@@ -4,7 +4,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'coffee',
     name: '커피',
-    description: '이동속도 +10%',
+    description: '발걸음이 가벼워집니다',
     maxLevel: 5,
     rarity: 'common',
     weight: 10,
@@ -13,7 +13,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'steel-mental',
     name: '강철 멘탈',
-    description: '최대 멘탈 +20, 긁힘 저항 +1',
+    description: '멘탈과 긁힘 저항을 강화합니다',
     maxLevel: 5,
     rarity: 'common',
     weight: 10,
@@ -25,16 +25,25 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'fact-bombing',
     name: '팩트 폭격',
-    description: '공격력 +5',
+    description: '한 발의 위력을 높입니다',
     maxLevel: 5,
     rarity: 'common',
     weight: 10,
     modifiers: [{ stat: 'attackDamage', operation: 'add', value: 5 }],
   },
   {
+    id: 'rapid-reply',
+    name: '칼답',
+    description: '더 빠른 주기로 공격합니다',
+    maxLevel: 5,
+    rarity: 'common',
+    weight: 9,
+    modifiers: [{ stat: 'attackCooldown', operation: 'multiply', value: 0.82 }],
+  },
+  {
     id: 'free-shipping',
     name: '무료배송',
-    description: '경험치 획득 범위 +35',
+    description: '경험치를 더 멀리서 끌어옵니다',
     maxLevel: 5,
     rarity: 'common',
     weight: 10,
@@ -43,7 +52,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'read-ignore',
     name: '읽씹',
-    description: '적 이동속도 -8%',
+    description: '모든 적의 이동을 늦춥니다',
     maxLevel: 5,
     rarity: 'rare',
     weight: 5,
@@ -52,7 +61,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'mental-recovery',
     name: '멘탈 회복',
-    description: '초당 멘탈 회복 +1',
+    description: '매초 멘탈을 회복합니다',
     maxLevel: 5,
     rarity: 'rare',
     weight: 5,
@@ -61,7 +70,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'continuous-reply',
     name: '연속 답장',
-    description: '발사체 +1',
+    description: '한 번에 더 많은 탄환을 발사합니다',
     maxLevel: 4,
     rarity: 'rare',
     weight: 4,
@@ -70,7 +79,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'jigeul-jaegeul',
     name: '지긁재긁',
-    description: '공격 범위·공격력·공격 속도 증가',
+    description: '공격 전반을 크게 강화합니다',
     maxLevel: 3,
     rarity: 'legendary',
     weight: 1,

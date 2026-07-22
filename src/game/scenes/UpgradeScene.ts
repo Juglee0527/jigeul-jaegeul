@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
-import type { UpgradeDefinition, UpgradeRarity } from '../types/game';
+import type { PlayerStats, UpgradeDefinition, UpgradeRarity } from '../types/game';
+import { formatUpgradeChanges } from '../ui/statFormatting';
 import type { GameScene } from './GameScene';
 
 interface UpgradeSceneData {
   choices: UpgradeDefinition[];
   levels: Record<string, number>;
+  stats: PlayerStats;
 }
 
 const RARITY_LABELS: Record<UpgradeRarity, string> = {
@@ -24,6 +26,7 @@ const RARITY_COLORS: Record<UpgradeRarity, number> = {
 export class UpgradeScene extends Phaser.Scene {
   private choices: UpgradeDefinition[] = [];
   private levels: Record<string, number> = {};
+  private stats!: PlayerStats;
   private cards: Phaser.GameObjects.Rectangle[] = [];
   private cardFooters: Phaser.GameObjects.Text[] = [];
   private selectedIndex = 0;
@@ -36,6 +39,7 @@ export class UpgradeScene extends Phaser.Scene {
   init(data: UpgradeSceneData): void {
     this.choices = data.choices;
     this.levels = data.levels;
+    this.stats = data.stats;
     this.cards = [];
     this.cardFooters = [];
     this.selectedIndex = 0;
@@ -120,13 +124,21 @@ export class UpgradeScene extends Phaser.Scene {
       fontSize: '17px',
     }).setOrigin(0.5);
     this.add.rectangle(x, y + 17, 276, 1, 0x3f3348, 1);
-    this.add.text(x, y + 76, upgrade.description, {
+    this.add.text(x, y + 48, upgrade.description, {
       align: 'center',
-      color: '#e9e0ef',
+      color: '#a99bb5',
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '21px',
-      lineSpacing: 8,
+      fontSize: '16px',
       wordWrap: { width: 270 },
+    }).setOrigin(0.5);
+    this.add.text(x, y + 98, formatUpgradeChanges(upgrade, this.stats), {
+      align: 'center',
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '16px',
+      fontStyle: 'bold',
+      lineSpacing: 6,
+      wordWrap: { width: 300 },
     }).setOrigin(0.5);
     const footer = this.add.text(x, y + 154, '', {
       color: '#fff36b',

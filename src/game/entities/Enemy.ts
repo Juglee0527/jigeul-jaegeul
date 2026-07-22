@@ -8,7 +8,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   private readonly definition: EnemyDefinition;
   private readonly speedMultiplier: number;
-  private readonly nameLabel: Phaser.GameObjects.Text;
+  private readonly messageLabel: Phaser.GameObjects.Text;
+  private readonly healthBarBackground: Phaser.GameObjects.Rectangle;
+  private readonly healthBarFill: Phaser.GameObjects.Rectangle;
+  private readonly healthBarWidth: number;
+  private readonly maxHp: number;
   private hp: number;
   private chargingUntil = 0;
   private nextChargeAt = 0;
@@ -19,13 +23,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     definition: EnemyDefinition,
+    message: string,
     hpMultiplier: number,
     speedMultiplier: number,
   ) {
     super(scene, x, y, `enemy-${definition.id}`);
 
     this.definition = definition;
-    this.hp = Math.ceil(definition.maxHp * hpMultiplier);
+    this.maxHp = Math.ceil(definition.maxHp * hpMultiplier);
+    this.hp = this.maxHp;
     this.speedMultiplier = speedMultiplier;
     this.contactDamage = definition.contactDamage;
     this.experienceValue = definition.experienceValue;
@@ -37,17 +43,35 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setCircle(definition.radius - 2, 2, 2);
 
-    this.nameLabel = scene.add
-      .text(x, y - definition.radius - 10, definition.name, {
+    this.messageLabel = scene.add
+      .text(x, y - definition.radius - 10, message, {
         backgroundColor: '#120c19',
         color: '#ffffff',
         fontFamily: 'system-ui, sans-serif',
-        fontSize: definition.archetype === 'tank' ? '18px' : '16px',
+        fontSize: definition.archetype === 'tank' ? '17px' : '15px',
         fontStyle: 'bold',
         padding: { x: 5, y: 2 },
       })
       .setOrigin(0.5, 1)
       .setDepth(7);
+
+    this.healthBarWidth = Math.max(38, definition.radius * 2);
+    this.healthBarBackground = scene.add.rectangle(
+      x - this.healthBarWidth / 2,
+      y + definition.radius + 7,
+      this.healthBarWidth,
+      7,
+      0x160d19,
+      0.95,
+    ).setOrigin(0, 0.5).setStrokeStyle(1, 0xffffff, 0.32).setDepth(7);
+    this.healthBarFill = scene.add.rectangle(
+      x - this.healthBarWidth / 2,
+      y + definition.radius + 7,
+      this.healthBarWidth,
+      5,
+      0x6dff8b,
+      1,
+    ).setOrigin(0, 0.5).setDepth(8);
   }
 
   updateBehavior(
@@ -55,7 +79,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     target: Phaser.GameObjects.Components.Transform,
     globalSpeedMultiplier: number,
   ): void {
-    this.nameLabel.setPosition(this.x, this.y - this.definition.radius - 10);
+    this.updateAttachedUi();
 
     if (this.definition.archetype === 'charger') {
       this.updateCharger(time, target, globalSpeedMultiplier);
@@ -66,7 +90,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number): boolean {
-    this.hp -= amount;
+    this.hp = Math.max(0, this.hp - amount);
+    this.updateHealthBar();
     if (this.hp <= 0) {
       this.destroy();
       return true;
@@ -86,10 +111,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   override destroy(fromScene?: boolean): void {
-    if (this.nameLabel?.active) {
-      this.nameLabel.destroy();
-    }
+    this.messageLabel?.destroy();
+    this.healthBarBackground?.destroy();
+    this.healthBarFill?.destroy();
     super.destroy(fromScene);
+  }
+
+  private updateAttachedUi(): void {
+    const barX = this.x - this.healthBarWidth / 2;
+    const barY = this.y + this.definition.radius + 7;
+    this.messageLabel.setPosition(this.x, this.y - this.definition.radius - 10);
+    this.healthBarBackground.setPosition(barX, barY);
+    this.healthBarFill.setPosition(barX, barY);
+  }
+
+  private updateHealthBar(): void {
+    const ratio = Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
+    this.healthBarFill.displayWidth = this.healthBarWidth * ratio;
+    this.healthBarFill.setFillStyle(ratio > 0.55 ? 0x6dff8b : ratio > 0.25 ? 0xffd65a : 0xff5c72);
   }
 
   private updateCharger(

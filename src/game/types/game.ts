@@ -77,6 +77,7 @@ export type EnemyArchetype = 'normal' | 'charger' | 'tank';
 export interface EnemyDefinition {
   id: string;
   name: string;
+  messages: readonly string[];
   archetype: EnemyArchetype;
   color: number;
   radius: number;

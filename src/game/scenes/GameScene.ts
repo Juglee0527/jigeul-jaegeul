@@ -158,6 +158,7 @@ export class GameScene extends Phaser.Scene {
       this.scoreSystem.currentCombo,
       this.scoreSystem.getCurrentScore(survivalSeconds, this.levelSystem.level),
       this.currentWave.name,
+      this.player.stats,
     );
 
     if (this.player.hp <= 0) {
@@ -289,7 +290,7 @@ export class GameScene extends Phaser.Scene {
     this.choosingUpgrade = true;
     this.cameras.main.flash(180, 255, 79, 216, false);
     const levels = Object.fromEntries(choices.map((choice) => [choice.id, this.upgradeSystem.getLevel(choice.id)]));
-    this.scene.launch('UpgradeScene', { choices, levels });
+    this.scene.launch('UpgradeScene', { choices, levels, stats: { ...this.player.stats } });
     this.scene.pause();
   }
 

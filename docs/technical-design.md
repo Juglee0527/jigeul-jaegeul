@@ -117,6 +117,8 @@ Game Clock → WaveSystem → EnemySpawner
 플레이어 사망 → GameResult → 점수 계산 → StorageService → ResultScene
 ```
 
+적 생성 시 시드 난수로 유형별 멘트를 선택한다. `Enemy`는 최대 체력과 현재 체력을 관리하고 피해를 받을 때 부착 체력바의 비율과 색상을 갱신한다. `UpgradeScene`은 현재 `PlayerStats` 복사본을 받아 각 modifier 적용 전·후 값을 계산해 표시한다.
+
 프레임 기반 수치 대신 Phaser가 제공하는 델타 시간 또는 타이머를 사용한다.
 
 ## 6. 시드 난수
