@@ -62,7 +62,7 @@ src/
 | BootScene | 그래픽 생성, 에셋 준비, 공통 설정 |
 | MenuScene | 모드 선택, 최고 기록, 게임 방법 |
 | GameScene | 월드 시뮬레이션과 시스템 조정 |
-| UpgradeScene | 게임을 멈추고 능력 선택 처리 |
+| UpgradeScene | 게임을 멈추고 좌우 방향키 포커스·Enter 확정 방식으로 능력 선택 처리 |
 | ResultScene | 결과 계산·저장·표시와 재시작 |
 
 `UpgradeScene`은 `GameScene` 위에 겹쳐 실행하거나 게임 시간을 명시적으로 멈추는 방식 중 하나로 구현한다. 어떤 방식을 택하든 타이머, 물리, 적 생성, 콤보 시간이 함께 멈춰야 한다.

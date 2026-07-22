@@ -24,6 +24,9 @@ const RARITY_COLORS: Record<UpgradeRarity, number> = {
 export class UpgradeScene extends Phaser.Scene {
   private choices: UpgradeDefinition[] = [];
   private levels: Record<string, number> = {};
+  private cards: Phaser.GameObjects.Rectangle[] = [];
+  private cardFooters: Phaser.GameObjects.Text[] = [];
+  private selectedIndex = 0;
   private selected = false;
 
   constructor() {
@@ -33,6 +36,9 @@ export class UpgradeScene extends Phaser.Scene {
   init(data: UpgradeSceneData): void {
     this.choices = data.choices;
     this.levels = data.levels;
+    this.cards = [];
+    this.cardFooters = [];
+    this.selectedIndex = 0;
     this.selected = false;
   }
 
@@ -53,17 +59,28 @@ export class UpgradeScene extends Phaser.Scene {
       fontSize: '42px',
       fontStyle: 'bold',
     }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 139, '숫자 키 1–3으로도 선택할 수 있습니다', {
-      color: '#8f829b',
+    this.add.text(GAME_WIDTH / 2, 139, '←  →  방향키로 고르고   ENTER로 선택', {
+      color: '#a99bb5',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '17px',
+      fontStyle: 'bold',
     }).setOrigin(0.5);
 
     const spacing = 370;
     const startX = GAME_WIDTH / 2 - ((this.choices.length - 1) * spacing) / 2;
     this.choices.forEach((upgrade, index) => {
       this.createCard(startX + index * spacing, 390, upgrade, index);
-      this.input.keyboard?.once(`keydown-${index + 1}`, () => this.selectUpgrade(upgrade.id));
+    });
+    this.renderSelection();
+
+    const keyboard = this.input.keyboard;
+    keyboard?.on('keydown-LEFT', this.selectPrevious, this);
+    keyboard?.on('keydown-RIGHT', this.selectNext, this);
+    keyboard?.on('keydown-ENTER', this.confirmSelection, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keyboard?.off('keydown-LEFT', this.selectPrevious, this);
+      keyboard?.off('keydown-RIGHT', this.selectNext, this);
+      keyboard?.off('keydown-ENTER', this.confirmSelection, this);
     });
   }
 
@@ -71,14 +88,16 @@ export class UpgradeScene extends Phaser.Scene {
     const currentLevel = this.levels[upgrade.id] ?? 0;
     const accent = RARITY_COLORS[upgrade.rarity];
     const card = this.add.rectangle(x, y, 332, 396, 0x15101d, 0.98)
-      .setStrokeStyle(2, accent, 0.9)
-      .setInteractive({ useHandCursor: true });
+      .setStrokeStyle(2, accent, 0.55)
+      .setInteractive({ useHandCursor: true })
+      .setData('accent', accent);
+    this.cards.push(card);
     this.add.rectangle(x, y - 190, 332, 7, accent, 1);
 
-    this.add.text(x - 136, y - 158, `0${index + 1}`, {
+    this.add.text(x - 136, y - 158, `CHOICE 0${index + 1}`, {
       color: '#776a82',
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '15px',
+      fontSize: '13px',
       fontStyle: 'bold',
     });
     this.add.text(x + 136, y - 158, RARITY_LABELS[upgrade.rarity], {
@@ -109,22 +128,53 @@ export class UpgradeScene extends Phaser.Scene {
       lineSpacing: 8,
       wordWrap: { width: 270 },
     }).setOrigin(0.5);
-    this.add.text(x, y + 154, '선택', {
-      color: '#8f829b',
+    const footer = this.add.text(x, y + 154, '', {
+      color: '#fff36b',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
       fontStyle: 'bold',
     }).setOrigin(0.5);
+    this.cardFooters.push(footer);
 
-    card.on('pointerover', () => {
-      card.setFillStyle(0x24182c);
-      card.setScale(1.025);
+    card.on('pointerover', () => this.setSelectedIndex(index));
+    card.on('pointerdown', () => {
+      this.setSelectedIndex(index);
+      this.confirmSelection();
     });
-    card.on('pointerout', () => {
-      card.setFillStyle(0x15101d);
-      card.setScale(1);
+  }
+
+  private selectPrevious(): void {
+    this.setSelectedIndex(this.selectedIndex - 1);
+  }
+
+  private selectNext(): void {
+    this.setSelectedIndex(this.selectedIndex + 1);
+  }
+
+  private setSelectedIndex(index: number): void {
+    if (this.selected || this.choices.length === 0) {
+      return;
+    }
+    this.selectedIndex = Phaser.Math.Wrap(index, 0, this.choices.length);
+    this.renderSelection();
+  }
+
+  private renderSelection(): void {
+    this.cards.forEach((card, index) => {
+      const isFocused = index === this.selectedIndex;
+      const accent = card.getData('accent') as number;
+      card.setFillStyle(isFocused ? 0x2b1a33 : 0x15101d);
+      card.setStrokeStyle(isFocused ? 4 : 2, accent, isFocused ? 1 : 0.55);
+      card.setScale(isFocused ? 1.035 : 1);
+      this.cardFooters[index]?.setText(isFocused ? '●  ENTER로 선택' : '');
     });
-    card.on('pointerdown', () => this.selectUpgrade(upgrade.id));
+  }
+
+  private confirmSelection(): void {
+    const upgrade = this.choices[this.selectedIndex];
+    if (upgrade) {
+      this.selectUpgrade(upgrade.id);
+    }
   }
 
   private selectUpgrade(id: string): void {
