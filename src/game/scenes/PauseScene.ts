@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { getCombatStatLines } from '../ui/statFormatting';
 import type { GameScene } from './GameScene';
 
 export class PauseScene extends Phaser.Scene {
@@ -9,50 +10,43 @@ export class PauseScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050308, 0.84);
-    this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 520, 500, COLORS.panel, 0.98)
+    const gameScene = this.scene.get('GameScene') as GameScene;
+    const stats = gameScene.getPlayerStats();
+
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050308, 0.88);
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 980, 550, COLORS.panel, 0.98)
       .setStrokeStyle(3, COLORS.primary, 0.85);
 
-    this.add
-      .text(GAME_WIDTH / 2, 180, '잠깐 멈춤', {
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '52px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
+    this.add.text(370, 128, '현재 성장 능력치', {
+      color: '#ff9bea', fontFamily: 'system-ui, sans-serif', fontSize: '24px', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.add.rectangle(370, 365, 380, 410, 0x0d0913, 0.9)
+      .setStrokeStyle(1, 0x5d436c, 0.9);
+    this.add.text(220, 180, getCombatStatLines(stats), {
+      color: '#ffffff', fontFamily: 'monospace', fontSize: '20px', lineSpacing: 10,
+    });
 
-    this.add
-      .text(GAME_WIDTH / 2, 235, '멘탈 정비 중...', {
-        color: '#ff9bea',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '21px',
-      })
-      .setOrigin(0.5);
+    this.add.text(860, 150, '잠시 멈춤', {
+      color: '#ffffff', fontFamily: 'system-ui, sans-serif', fontSize: '48px', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.add.text(860, 204, '성장 상태를 확인해 보세요', {
+      color: '#a99bb5', fontFamily: 'system-ui, sans-serif', fontSize: '19px',
+    }).setOrigin(0.5);
 
-    this.createButton(320, '계속하기', () => this.resumeGame());
-    this.createButton(410, '다시 시작', () => this.restartGame());
-    this.createButton(500, '메인 화면', () => this.returnToMenu());
+    this.createButton(860, 305, '계속하기', () => this.resumeGame());
+    this.createButton(860, 400, '다시 시작', () => this.restartGame());
+    this.createButton(860, 495, '메인 화면', () => this.returnToMenu());
 
     this.input.keyboard?.once('keydown-ESC', () => this.resumeGame());
   }
 
-  private createButton(y: number, label: string, onClick: () => void): void {
-    const button = this.add
-      .rectangle(GAME_WIDTH / 2, y, 330, 68, COLORS.secondary)
+  private createButton(x: number, y: number, label: string, onClick: () => void): void {
+    const button = this.add.rectangle(x, y, 330, 68, COLORS.secondary)
       .setStrokeStyle(2, COLORS.white, 0.7)
       .setInteractive({ useHandCursor: true });
-
-    this.add
-      .text(GAME_WIDTH / 2, y, label, {
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '26px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
+    this.add.text(x, y, label, {
+      color: '#ffffff', fontFamily: 'system-ui, sans-serif', fontSize: '26px', fontStyle: 'bold',
+    }).setOrigin(0.5);
     button.on('pointerover', () => button.setFillStyle(COLORS.primary));
     button.on('pointerout', () => button.setFillStyle(COLORS.secondary));
     button.on('pointerdown', onClick);

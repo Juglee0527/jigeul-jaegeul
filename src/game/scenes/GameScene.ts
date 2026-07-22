@@ -115,7 +115,6 @@ export class GameScene extends Phaser.Scene {
     this.player.update(delta);
     const survivalSeconds = this.activePlayTimeMs / 1000;
     this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
-    this.scoreSystem.update(this.activePlayTimeMs);
 
     if (this.activePlayTimeMs >= this.nextSpawnAt) {
       this.enemySpawner.spawn(this.currentWave);
@@ -155,7 +154,6 @@ export class GameScene extends Phaser.Scene {
       this.levelSystem.requiredExperience,
       survivalSeconds,
       this.scoreSystem.killCount,
-      this.scoreSystem.currentCombo,
       this.scoreSystem.getCurrentScore(survivalSeconds, this.levelSystem.level),
       this.currentWave.name,
       this.player.stats,
@@ -238,7 +236,7 @@ export class GameScene extends Phaser.Scene {
     projectile.destroy();
     this.showHitEffect(dropX, dropY);
     if (enemy.takeDamage(damage)) {
-      this.scoreSystem.registerKill(this.activePlayTimeMs);
+      this.scoreSystem.registerKill();
       this.showKillEffect(dropX, dropY, enemy.experienceValue);
       if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
         this.experienceGems.add(
@@ -278,7 +276,12 @@ export class GameScene extends Phaser.Scene {
 
   applyUpgrade(id: string): void {
     this.upgradeSystem.apply(id, this.player);
+    this.hud.showDetailedStats();
     this.choosingUpgrade = false;
+  }
+
+  getPlayerStats(): Readonly<Player['stats']> {
+    return this.player.stats;
   }
 
   private openUpgradeSelection(): void {

@@ -10,7 +10,6 @@ export interface GameResult {
   survivalSeconds: number;
   killCount: number;
   level: number;
-  maxCombo: number;
   bossKillCount: number;
   mode: GameMode;
   seed: string;
@@ -34,7 +33,6 @@ export interface SavedGameData {
   highScore: number;
   longestSurvivalSeconds: number;
   maxKills: number;
-  maxCombo: number;
   dailyRecords: Record<string, DailyRecord>;
   settings: GameSettings;
 }

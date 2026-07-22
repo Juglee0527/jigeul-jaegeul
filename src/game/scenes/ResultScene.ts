@@ -11,7 +11,6 @@ export class ResultScene extends Phaser.Scene {
     survivalSeconds: 0,
     killCount: 0,
     level: 1,
-    maxCombo: 0,
     bossKillCount: 0,
     mode: 'normal',
     seed: 'unknown',
@@ -58,7 +57,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         275,
-        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}\n최고 콤보   x${this.result.maxCombo}`,
+        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}`,
         {
           align: 'center',
           color: '#ffffff',

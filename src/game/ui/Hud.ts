@@ -2,11 +2,13 @@ import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import type { PlayerStats } from '../types/game';
-import { getCombatStatLines } from './statFormatting';
+import { getCombatStatLines, getCompactStatLines } from './statFormatting';
 
 const HUD_DEPTH = 50;
+const DETAIL_DURATION_MS = 3_000;
 
 export class Hud {
+  private readonly scene: Phaser.Scene;
   private readonly hpBar: Phaser.GameObjects.Rectangle;
   private readonly hpText: Phaser.GameObjects.Text;
   private readonly levelText: Phaser.GameObjects.Text;
@@ -14,22 +16,22 @@ export class Hud {
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
   private readonly scoreText: Phaser.GameObjects.Text;
-  private readonly comboText: Phaser.GameObjects.Text;
   private readonly waveText: Phaser.GameObjects.Text;
+  private readonly statsPanel: Phaser.GameObjects.Rectangle;
+  private readonly statsTitle: Phaser.GameObjects.Text;
   private readonly statsText: Phaser.GameObjects.Text;
+  private currentStats?: PlayerStats;
+  private detailedStatsVisible = true;
+  private statsCollapseTimer?: Phaser.Time.TimerEvent;
 
   constructor(scene: Phaser.Scene) {
+    this.scene = scene;
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      color: '#a99eb8',
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '14px',
-      fontStyle: 'bold',
+      color: '#a99eb8', fontFamily: 'system-ui, sans-serif', fontSize: '14px', fontStyle: 'bold',
     };
 
     scene.add.rectangle(GAME_WIDTH / 2, 43, GAME_WIDTH - 40, 66, 0x0d0913, 0.92)
-      .setStrokeStyle(1, 0x463456, 0.85)
-      .setDepth(HUD_DEPTH);
-
+      .setStrokeStyle(1, 0x463456, 0.85).setDepth(HUD_DEPTH);
     scene.add.text(40, 24, 'MENTAL', labelStyle).setDepth(HUD_DEPTH + 1);
     scene.add.rectangle(40, 50, 240, 12, 0x2c1c32, 1).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
     this.hpBar = scene.add.rectangle(40, 50, 240, 12, COLORS.primary, 1)
@@ -53,19 +55,15 @@ export class Hud {
     this.xpBar = scene.add.rectangle(112, 91, GAME_WIDTH - 152, 8, COLORS.secondary, 1)
       .setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
 
-    scene.add.rectangle(24, 118, 218, 202, 0x0d0913, 0.82)
+    this.statsPanel = scene.add.rectangle(24, 118, 230, 286, 0x0d0913, 0.86)
       .setOrigin(0).setStrokeStyle(1, 0x463456, 0.8).setDepth(HUD_DEPTH - 1);
-    scene.add.text(40, 134, 'GROWTH STATS', {
+    this.statsTitle = scene.add.text(40, 134, 'GROWTH STATS', {
       color: '#ff9bea', fontFamily: 'system-ui, sans-serif', fontSize: '13px', fontStyle: 'bold', letterSpacing: 1,
     }).setDepth(HUD_DEPTH);
     this.statsText = scene.add.text(40, 164, '', {
-      color: '#e9e0ef', fontFamily: 'monospace', fontSize: '15px', lineSpacing: 7,
+      color: '#e9e0ef', fontFamily: 'monospace', fontSize: '14px', lineSpacing: 5,
     }).setDepth(HUD_DEPTH);
-
-    this.comboText = scene.add.text(GAME_WIDTH / 2, 118, '', {
-      color: '#fff36b', fontFamily: 'system-ui, sans-serif', fontSize: '30px', fontStyle: 'bold',
-      stroke: '#3a1832', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1).setVisible(false);
+    this.showDetailedStats();
 
     scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 28, 360, 38, 0x0d0913, 0.88)
       .setStrokeStyle(1, COLORS.secondary, 0.6).setDepth(HUD_DEPTH);
@@ -80,6 +78,16 @@ export class Hud {
     }).setOrigin(1, 0.5).setDepth(HUD_DEPTH + 1);
   }
 
+  showDetailedStats(durationMs = DETAIL_DURATION_MS): void {
+    this.statsCollapseTimer?.remove(false);
+    this.detailedStatsVisible = true;
+    this.applyStatsLayout();
+    this.statsCollapseTimer = this.scene.time.delayedCall(durationMs, () => {
+      this.detailedStatsVisible = false;
+      this.applyStatsLayout();
+    });
+  }
+
   update(
     hp: number,
     maxHp: number,
@@ -88,11 +96,11 @@ export class Hud {
     requiredExperience: number,
     survivalSeconds: number,
     killCount: number,
-    currentCombo: number,
     currentScore: number,
     waveName: string,
     stats: PlayerStats,
   ): void {
+    this.currentStats = stats;
     const hpRatio = Phaser.Math.Clamp(hp / maxHp, 0, 1);
     const xpRatio = Phaser.Math.Clamp(experience / requiredExperience, 0, 1);
     this.hpBar.displayWidth = 240 * hpRatio;
@@ -103,9 +111,26 @@ export class Hud {
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치  ${killCount}`);
     this.scoreText.setText(currentScore.toLocaleString('ko-KR'));
-    this.comboText.setText(`${currentCombo} COMBO`).setVisible(currentCombo >= 2);
     this.waveText.setText(waveName);
-    this.statsText.setText(getCombatStatLines(stats));
+    this.refreshStatsText();
+  }
+
+  private applyStatsLayout(): void {
+    this.statsPanel.displayHeight = this.detailedStatsVisible ? 286 : 76;
+    this.statsTitle.setText(this.detailedStatsVisible ? 'GROWTH STATS' : 'STATS');
+    this.statsText.setPosition(40, this.detailedStatsVisible ? 164 : 156);
+    this.statsText.setFontSize(this.detailedStatsVisible ? 14 : 13);
+    this.statsText.setLineSpacing(this.detailedStatsVisible ? 5 : 2);
+    this.refreshStatsText();
+  }
+
+  private refreshStatsText(): void {
+    if (!this.currentStats) {
+      return;
+    }
+    this.statsText.setText(
+      this.detailedStatsVisible ? getCombatStatLines(this.currentStats) : getCompactStatLines(this.currentStats),
+    );
   }
 
   private formatTime(totalSeconds: number): string {

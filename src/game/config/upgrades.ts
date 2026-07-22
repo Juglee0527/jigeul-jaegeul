@@ -41,6 +41,15 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     modifiers: [{ stat: 'attackCooldown', operation: 'multiply', value: 0.82 }],
   },
   {
+    id: 'cc-all',
+    name: '전체 참조',
+    description: '탄환이 더 먼 곳까지 날아갑니다',
+    maxLevel: 5,
+    rarity: 'common',
+    weight: 9,
+    modifiers: [{ stat: 'attackRange', operation: 'add', value: 110 }],
+  },
+  {
     id: 'free-shipping',
     name: '무료배송',
     description: '경험치를 더 멀리서 끌어옵니다',

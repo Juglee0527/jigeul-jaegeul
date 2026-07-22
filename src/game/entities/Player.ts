@@ -14,7 +14,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     attackCooldown: 720,
     projectileSpeed: 780,
     projectileCount: 1,
-    attackRange: 1_000,
+    attackRange: 440,
     pickupRange: 105,
     armor: 0,
     regeneration: 0,

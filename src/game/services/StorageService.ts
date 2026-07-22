@@ -49,7 +49,6 @@ export class StorageService {
       highScore: Math.max(current.highScore, finalScore),
       longestSurvivalSeconds: Math.max(current.longestSurvivalSeconds, result.survivalSeconds),
       maxKills: Math.max(current.maxKills, result.killCount),
-      maxCombo: Math.max(current.maxCombo, result.maxCombo),
       dailyRecords: dailyRecord
         ? { ...current.dailyRecords, [dailyRecord.date]: dailyRecord }
         : current.dailyRecords,
@@ -81,7 +80,6 @@ export class StorageService {
         defaults.longestSurvivalSeconds,
       ),
       maxKills: this.nonNegativeNumber(value.maxKills, defaults.maxKills),
-      maxCombo: this.nonNegativeNumber(value.maxCombo, defaults.maxCombo),
       dailyRecords: this.sanitizeDailyRecords(value.dailyRecords),
       settings: this.isRecord(value.settings) && typeof value.settings.soundEnabled === 'boolean'
         ? { soundEnabled: value.settings.soundEnabled }
@@ -95,7 +93,6 @@ export class StorageService {
       highScore: 0,
       longestSurvivalSeconds: 0,
       maxKills: 0,
-      maxCombo: 0,
       dailyRecords: {},
       settings: { soundEnabled: true },
     };

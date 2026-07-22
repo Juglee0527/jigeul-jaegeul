@@ -65,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 422, '최고 점수', records.highScore.toLocaleString('ko-KR'));
     this.createStat(270, 422, '최장 생존', this.formatTime(records.longestSurvivalSeconds));
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
-    this.createStat(270, 515, '최고 콤보', `x${records.maxCombo}`);
+    this.createStat(270, 515, '생존 목표', '05:00');
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, 'ENTER 빠른 시작  ·  WASD / 방향키 이동  ·  ESC 일시정지', {
       color: '#6f6578',

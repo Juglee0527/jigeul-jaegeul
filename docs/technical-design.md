@@ -65,7 +65,7 @@ src/
 | UpgradeScene | 게임을 멈추고 좌우 방향키 포커스·Enter 확정 방식으로 능력 선택 처리 |
 | ResultScene | 결과 계산·저장·표시와 재시작 |
 
-`UpgradeScene`은 `GameScene` 위에 겹쳐 실행하거나 게임 시간을 명시적으로 멈추는 방식 중 하나로 구현한다. 어떤 방식을 택하든 타이머, 물리, 적 생성, 콤보 시간이 함께 멈춰야 한다.
+`UpgradeScene`은 `GameScene` 위에 겹쳐 실행하고 게임 시간을 명시적으로 멈춘다. 타이머, 물리, 적 생성이 함께 멈춰야 한다.
 
 ## 4. 핵심 타입
 
@@ -91,7 +91,6 @@ interface GameResult {
   killCount: number;
   bossKillCount: number;
   level: number;
-  maxCombo: number;
 }
 
 interface WaveConfig {
@@ -112,12 +111,14 @@ interface WaveConfig {
 입력 → Player 이동
 Game Clock → WaveSystem → EnemySpawner
 자동 공격 타이머 → 전역 최근접 대상 탐색 → Player 부착 총기 회전·반동 → 매 프레임 직접 이동하는 방향성 Projectile 일제 사격
-충돌 → 피해 → 적 사망 → 경험치/처치/콤보
+충돌 → 피해 → 적 사망 → 경험치/처치/점수
 경험치 획득 → LevelSystem → UpgradeScene
 플레이어 사망 → GameResult → 점수 계산 → StorageService → ResultScene
 ```
 
 적 생성 시 시드 난수로 유형별 멘트를 선택한다. `Enemy`는 최대 체력과 현재 체력을 관리하고 피해를 받을 때 부착 체력바의 비율과 색상을 갱신한다. `UpgradeScene`은 현재 `PlayerStats` 복사본을 받아 각 modifier 적용 전·후 값을 계산해 표시한다.
+
+`Hud`의 상세 능력치 패널은 시작과 능력 적용 시 3초 타이머를 다시 시작한 뒤 작은 요약 패널로 접힌다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 계속 표시한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
 
 프레임 기반 수치 대신 Phaser가 제공하는 델타 시간 또는 타이머를 사용한다.
 
@@ -154,7 +155,6 @@ interface SavedGameData {
   highScore: number;
   longestSurvivalSeconds: number;
   maxKills: number;
-  maxCombo: number;
   dailyRecords: Record<string, DailyRecord>;
   settings: GameSettings;
 }
