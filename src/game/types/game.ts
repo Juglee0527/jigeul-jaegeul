@@ -1,9 +1,20 @@
+export type GameMode = 'normal' | 'daily';
+
+export interface GameSession {
+  mode: GameMode;
+  seed: string;
+  dailyDate?: string;
+}
+
 export interface GameResult {
   survivalSeconds: number;
   killCount: number;
   level: number;
   maxCombo: number;
   bossKillCount: number;
+  mode: GameMode;
+  seed: string;
+  dailyDate?: string;
 }
 
 export interface DailyRecord {

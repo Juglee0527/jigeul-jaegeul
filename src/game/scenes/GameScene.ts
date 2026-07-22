@@ -5,12 +5,13 @@ import { Enemy } from '../entities/Enemy';
 import { ExperienceGem } from '../entities/ExperienceGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
+import { createRandomSeed, SeededRandom } from '../services/SeededRandom';
 import { LevelSystem } from '../systems/LevelSystem';
 import { EnemySpawner } from '../systems/EnemySpawner';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WaveSystem } from '../systems/WaveSystem';
-import type { WaveConfig } from '../types/game';
+import type { GameSession, WaveConfig } from '../types/game';
 import { Hud } from '../ui/Hud';
 
 const MAX_EXPERIENCE_GEMS = 180;
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   private scoreSystem!: ScoreSystem;
   private enemySpawner!: EnemySpawner;
   private currentWave!: WaveConfig;
+  private session!: GameSession;
   private activePlayTimeMs = 0;
   private nextAttackAt = 0;
   private nextSpawnAt = 0;
@@ -36,6 +38,13 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('GameScene');
+  }
+
+  init(data?: { session?: GameSession }): void {
+    this.session = data?.session ?? {
+      mode: 'normal',
+      seed: createRandomSeed(),
+    };
   }
 
   create(): void {
@@ -54,10 +63,16 @@ export class GameScene extends Phaser.Scene {
     this.experienceGems = this.physics.add.group();
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.levelSystem = new LevelSystem();
-    this.upgradeSystem = new UpgradeSystem();
+    this.upgradeSystem = new UpgradeSystem(
+      new SeededRandom(`${this.session.seed}:upgrades`),
+    );
     this.waveSystem = new WaveSystem();
-    this.scoreSystem = new ScoreSystem();
-    this.enemySpawner = new EnemySpawner(this, this.enemies);
+    this.scoreSystem = new ScoreSystem(this.session);
+    this.enemySpawner = new EnemySpawner(
+      this,
+      this.enemies,
+      new SeededRandom(`${this.session.seed}:enemies`),
+    );
     this.currentWave = this.waveSystem.getCurrentWave(0);
     this.hud = new Hud(this);
 

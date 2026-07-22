@@ -1,4 +1,4 @@
-import type { GameResult } from '../types/game';
+import type { GameResult, GameSession } from '../types/game';
 
 const COMBO_WINDOW_MS = 2_000;
 
@@ -18,6 +18,8 @@ export class ScoreSystem {
   maxCombo = 0;
 
   private lastKillAt = Number.NEGATIVE_INFINITY;
+
+  constructor(private readonly session: GameSession) {}
 
   registerKill(playTimeMs: number): void {
     this.killCount += 1;
@@ -45,6 +47,7 @@ export class ScoreSystem {
       level,
       maxCombo: this.maxCombo,
       bossKillCount: 0,
+      ...this.session,
     };
   }
 }

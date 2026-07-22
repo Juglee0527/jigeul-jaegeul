@@ -1,9 +1,12 @@
 import { UPGRADES } from '../config/upgrades';
 import type { Player } from '../entities/Player';
+import type { RandomSource } from '../services/SeededRandom';
 import type { UpgradeDefinition } from '../types/game';
 
 export class UpgradeSystem {
   private readonly levels = new Map<string, number>();
+
+  constructor(private readonly random: RandomSource) {}
 
   getChoices(count = 3): UpgradeDefinition[] {
     const pool = UPGRADES.filter((upgrade) => this.getLevel(upgrade.id) < upgrade.maxLevel);
@@ -39,7 +42,7 @@ export class UpgradeSystem {
 
   private weightedPick(pool: readonly UpgradeDefinition[]): UpgradeDefinition {
     const totalWeight = pool.reduce((sum, upgrade) => sum + upgrade.weight, 0);
-    let roll = Math.random() * totalWeight;
+    let roll = this.random.next() * totalWeight;
 
     for (const upgrade of pool) {
       roll -= upgrade.weight;
