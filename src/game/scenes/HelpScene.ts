@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { AudioManager } from '../services/AudioManager';
 
 export class HelpScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   constructor() {
     super('HelpScene');
   }
@@ -70,6 +72,8 @@ export class HelpScene extends Phaser.Scene {
   }
 
   private close(): void {
+    this.audio.play('confirm');
+    this.audio.setMood('menu');
     this.scene.resume('MenuScene');
     this.scene.stop();
   }

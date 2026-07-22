@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { AudioManager } from '../services/AudioManager';
 import type { PlayerStats, UpgradeDefinition, UpgradeRarity } from '../types/game';
 import { formatUpgradeChanges } from '../ui/statFormatting';
 import type { GameScene } from './GameScene';
@@ -24,6 +25,7 @@ const RARITY_COLORS: Record<UpgradeRarity, number> = {
 };
 
 export class UpgradeScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   private choices: UpgradeDefinition[] = [];
   private levels: Record<string, number> = {};
   private stats!: PlayerStats;
@@ -156,10 +158,12 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   private selectPrevious(): void {
+    this.audio.play('navigate');
     this.setSelectedIndex(this.selectedIndex - 1);
   }
 
   private selectNext(): void {
+    this.audio.play('navigate');
     this.setSelectedIndex(this.selectedIndex + 1);
   }
 

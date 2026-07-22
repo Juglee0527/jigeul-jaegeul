@@ -1,15 +1,18 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
+import { AudioManager } from '../services/AudioManager';
 import { getCombatStatLines } from '../ui/statFormatting';
 import type { GameScene } from './GameScene';
 
 export class PauseScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   constructor() {
     super('PauseScene');
   }
 
   create(): void {
+    this.audio.setMood('paused');
     const gameScene = this.scene.get('GameScene') as GameScene;
     const stats = gameScene.getPlayerStats();
 
@@ -53,6 +56,8 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private resumeGame(): void {
+    this.audio.play('confirm');
+    this.audio.setMood('game');
     this.scene.resume('GameScene');
     this.scene.stop();
   }
@@ -60,11 +65,15 @@ export class PauseScene extends Phaser.Scene {
   private restartGame(): void {
     const gameScene = this.scene.get('GameScene') as GameScene;
     const session = gameScene.createRestartSession();
+    this.audio.play('confirm');
+    this.audio.setMood('game');
     this.scene.stop('GameScene');
     this.scene.start('GameScene', { session });
   }
 
   private returnToMenu(): void {
+    this.audio.play('confirm');
+    this.audio.setMood('menu');
     this.scene.stop('GameScene');
     this.scene.start('MenuScene');
   }

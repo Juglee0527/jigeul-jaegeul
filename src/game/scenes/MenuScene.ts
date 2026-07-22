@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { createRandomSeed, getLocalDateSeed } from '../services/SeededRandom';
+import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
 import type { GameSession } from '../types/game';
 
 export class MenuScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   private menuCards: Phaser.GameObjects.Rectangle[] = [];
   private menuActions: Array<() => void> = [];
   private selectedIndex = 0;
@@ -15,6 +17,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.audio.setMood('menu');
     this.menuCards = [];
     this.menuActions = [];
     this.selectedIndex = 0;
@@ -58,6 +61,7 @@ export class MenuScene extends Phaser.Scene {
     }, todayRecord ? `오늘 최고  ${todayRecord.score.toLocaleString('ko-KR')}` : '첫 기록을 남겨보세요');
 
     this.createSmallButton(700, 462, '게임 방법  →', () => {
+      this.audio.setMood('paused');
       this.scene.launch('HelpScene');
       this.scene.pause();
     });
@@ -172,10 +176,14 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private selectPrevious(): void {
+    this.audio.unlock();
+    this.audio.play('navigate');
     this.setSelectedIndex(this.selectedIndex - 1);
   }
 
   private selectNext(): void {
+    this.audio.unlock();
+    this.audio.play('navigate');
     this.setSelectedIndex(this.selectedIndex + 1);
   }
 
@@ -203,6 +211,8 @@ export class MenuScene extends Phaser.Scene {
 
   private activateIndex(index: number): void {
     this.setSelectedIndex(index);
+    this.audio.unlock();
+    this.audio.play('confirm');
     this.menuActions[index]?.();
   }
 
@@ -221,6 +231,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private startGame(session: GameSession): void {
+    this.audio.setMood('game');
     this.scene.start('GameScene', { session });
   }
 

@@ -2,11 +2,13 @@ import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { createRandomSeed } from '../services/SeededRandom';
+import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
 import { calculateFinalScore } from '../systems/ScoreSystem';
 import type { GameResult, GameSession } from '../types/game';
 
 export class ResultScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   private result: GameResult = {
     survivalSeconds: 0,
     killCount: 0,
@@ -25,6 +27,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.audio.setMood('result');
     const finalScore = calculateFinalScore(this.result);
     const recordUpdate = new StorageService().updateRecords(this.result, finalScore);
 
@@ -120,13 +123,19 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.createButton(GAME_WIDTH / 2 - 180, 630, '다시 하기', () => {
+      this.audio.play('confirm');
+      this.audio.setMood('game');
       this.scene.start('GameScene', { session: this.getSession() });
     });
     this.createButton(GAME_WIDTH / 2 + 180, 630, '메인 화면', () => {
+      this.audio.play('confirm');
+      this.audio.setMood('menu');
       this.scene.start('MenuScene');
     });
 
     this.input.keyboard?.once('keydown-ENTER', () => {
+      this.audio.play('confirm');
+      this.audio.setMood('game');
       this.scene.start('GameScene', { session: this.getSession() });
     });
   }

@@ -6,6 +6,7 @@ import { ExperienceGem } from '../entities/ExperienceGem';
 import { Player } from '../entities/Player';
 import { Projectile } from '../entities/Projectile';
 import { createRandomSeed, SeededRandom } from '../services/SeededRandom';
+import { AudioManager } from '../services/AudioManager';
 import { LevelSystem } from '../systems/LevelSystem';
 import { EnemySpawner } from '../systems/EnemySpawner';
 import { ScoreSystem } from '../systems/ScoreSystem';
@@ -18,6 +19,7 @@ const MAX_EXPERIENCE_GEMS = 180;
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 
 export class GameScene extends Phaser.Scene {
+  private readonly audio = AudioManager.getInstance();
   private player!: Player;
   private enemies!: Phaser.Physics.Arcade.Group;
   private projectiles!: Phaser.Physics.Arcade.Group;
@@ -48,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.audio.setMood('game');
     this.physics.resume();
     this.gameEnded = false;
     this.choosingUpgrade = false;
@@ -199,6 +202,7 @@ export class GameScene extends Phaser.Scene {
     const spreadRadians = Phaser.Math.DegToRad(projectileCount > 3 ? 12 : 8);
 
     this.player.fireWeapon(baseAngle);
+    this.audio.play('shoot');
     for (let index = 0; index < projectileCount; index += 1) {
       const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
       const shotAngle = baseAngle + offset;
@@ -235,7 +239,9 @@ export class GameScene extends Phaser.Scene {
     const damage = projectile.damage;
     projectile.destroy();
     this.showHitEffect(dropX, dropY);
+    this.audio.play('hit');
     if (enemy.takeDamage(damage)) {
+      this.audio.play('kill');
       this.scoreSystem.registerKill();
       this.showKillEffect(dropX, dropY, enemy.experienceValue);
       if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
@@ -257,6 +263,7 @@ export class GameScene extends Phaser.Scene {
 
     const leveledUp = this.levelSystem.addExperience(gem.value);
     gem.destroy();
+    this.audio.play('pickup');
 
     if (leveledUp) {
       this.openUpgradeSelection();
@@ -269,6 +276,7 @@ export class GameScene extends Phaser.Scene {
   ): void {
     const enemy = enemyObject as Enemy;
     if (this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs)) {
+      this.audio.play('hurt');
       this.cameras.main.shake(90, 0.006);
       this.cameras.main.flash(80, 255, 38, 70, false);
       if (this.player.hp <= 0) {
@@ -279,6 +287,8 @@ export class GameScene extends Phaser.Scene {
 
   applyUpgrade(id: string): void {
     this.upgradeSystem.apply(id, this.player);
+    this.audio.play('confirm');
+    this.audio.setMood('game');
     this.hud.showDetailedStats();
     this.choosingUpgrade = false;
   }
@@ -294,6 +304,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.choosingUpgrade = true;
+    this.audio.play('levelUp');
+    this.audio.setMood('paused');
     this.cameras.main.flash(180, 255, 79, 216, false);
     const levels = Object.fromEntries(choices.map((choice) => [choice.id, this.upgradeSystem.getLevel(choice.id)]));
     this.scene.launch('UpgradeScene', { choices, levels, stats: { ...this.player.stats } });
@@ -313,6 +325,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.setVelocity(0, 0);
+    this.audio.play('pause');
+    this.audio.setMood('paused');
     this.scene.launch('PauseScene');
     this.scene.pause();
   }
@@ -368,6 +382,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.gameEnded = true;
+    this.audio.play('gameOver');
+    this.audio.setMood('result');
     this.physics.pause();
     this.player.setTint(0x555555);
 
