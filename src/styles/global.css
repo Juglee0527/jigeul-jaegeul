@@ -26,6 +26,21 @@ body {
     #050308;
 }
 
+body::before {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 79 216 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(143 91 255 / 4%) 1px, transparent 1px);
+  background-size: 40px 40px;
+  content: "";
+  pointer-events: none;
+}
+
 #app canvas {
   display: block;
+  box-shadow:
+    0 0 30px rgb(143 91 255 / 30%),
+    0 0 80px rgb(255 79 216 / 12%);
+  outline: 1px solid rgb(255 79 216 / 22%);
 }

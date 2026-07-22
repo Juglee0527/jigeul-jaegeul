@@ -57,6 +57,10 @@ export class GameScene extends Phaser.Scene {
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
     this.add.grid(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 80, 80, 0x100b18, 1, 0x2d1c3e, 0.35);
+    this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH - 10, GAME_HEIGHT - 10)
+      .setStrokeStyle(4, COLORS.secondary, 0.45)
+      .setDepth(49);
 
     this.enemies = this.physics.add.group();
     this.projectiles = this.physics.add.group();
@@ -91,6 +95,14 @@ export class GameScene extends Phaser.Scene {
       undefined,
       this,
     );
+
+    const keyboard = this.input.keyboard;
+    keyboard?.on('keydown-ESC', this.pauseGame, this);
+    this.game.events.on(Phaser.Core.Events.BLUR, this.pauseGame, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keyboard?.off('keydown-ESC', this.pauseGame, this);
+      this.game.events.off(Phaser.Core.Events.BLUR, this.pauseGame, this);
+    });
 
   }
 
@@ -214,6 +226,7 @@ export class GameScene extends Phaser.Scene {
     projectile.destroy();
     if (enemy.takeDamage(damage)) {
       this.scoreSystem.registerKill(this.activePlayTimeMs);
+      this.showKillEffect(dropX, dropY, enemy.experienceValue);
       if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
         this.experienceGems.add(
           new ExperienceGem(this, dropX, dropY, enemy.experienceValue),
@@ -244,7 +257,10 @@ export class GameScene extends Phaser.Scene {
     enemyObject: ArcadeCollisionObject,
   ): void {
     const enemy = enemyObject as Enemy;
-    this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs);
+    if (this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs)) {
+      this.cameras.main.shake(90, 0.006);
+      this.cameras.main.flash(80, 255, 38, 70, false);
+    }
   }
 
   applyUpgrade(id: string): void {
@@ -259,9 +275,60 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.choosingUpgrade = true;
+    this.cameras.main.flash(180, 255, 79, 216, false);
     const levels = Object.fromEntries(choices.map((choice) => [choice.id, this.upgradeSystem.getLevel(choice.id)]));
     this.scene.launch('UpgradeScene', { choices, levels });
     this.scene.pause();
+  }
+
+  createRestartSession(): GameSession {
+    if (this.session.mode === 'normal') {
+      return { mode: 'normal', seed: createRandomSeed() };
+    }
+    return { ...this.session };
+  }
+
+  private pauseGame(): void {
+    if (this.gameEnded || this.choosingUpgrade || !this.sys.isActive()) {
+      return;
+    }
+
+    this.player.setVelocity(0, 0);
+    this.scene.launch('PauseScene');
+    this.scene.pause();
+  }
+
+  private showKillEffect(x: number, y: number, experienceValue: number): void {
+    const burst = this.add
+      .circle(x, y, 18, COLORS.primary, 0.65)
+      .setStrokeStyle(3, COLORS.projectile, 0.9)
+      .setDepth(20);
+    const rewardText = this.add
+      .text(x, y - 18, `+${experienceValue} EXP`, {
+        color: '#fff36b',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '15px',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(21);
+
+    this.tweens.add({
+      targets: burst,
+      scale: 2.2,
+      alpha: 0,
+      duration: 240,
+      ease: 'Quad.easeOut',
+      onComplete: () => burst.destroy(),
+    });
+    this.tweens.add({
+      targets: rewardText,
+      y: y - 46,
+      alpha: 0,
+      duration: 520,
+      ease: 'Quad.easeOut',
+      onComplete: () => rewardText.destroy(),
+    });
   }
 
   private endGame(survivalSeconds: number): void {

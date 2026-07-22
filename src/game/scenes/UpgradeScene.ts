@@ -39,7 +39,7 @@ export class UpgradeScene extends Phaser.Scene {
   create(): void {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x050308, 0.88);
 
-    this.add
+    const title = this.add
       .text(GAME_WIDTH / 2, 92, '레벨 업!', {
         color: '#ff4fd8',
         fontFamily: 'system-ui, sans-serif',
@@ -47,6 +47,15 @@ export class UpgradeScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: title,
+      scale: { from: 0.92, to: 1.06 },
+      duration: 620,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
     this.add
       .text(GAME_WIDTH / 2, 148, '능력 하나를 선택하세요', {
