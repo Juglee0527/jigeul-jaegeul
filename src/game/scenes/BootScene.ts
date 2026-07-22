@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
+import { COLORS } from '../config/constants';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -8,21 +8,20 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 42, '지긁재긁', {
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '72px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
+    this.createCircleTexture('player', 24, COLORS.player);
+    this.createCircleTexture('enemy', 22, COLORS.enemy);
+    this.createCircleTexture('projectile', 7, COLORS.projectile);
 
-    this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 42, '긁히면 진다.', {
-        color: '#ff4fd8',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '28px',
-      })
-      .setOrigin(0.5);
+    this.scene.start('MenuScene');
+  }
+
+  private createCircleTexture(key: string, radius: number, color: number): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    graphics.fillStyle(color);
+    graphics.fillCircle(radius, radius, radius);
+    graphics.lineStyle(3, COLORS.white, 0.8);
+    graphics.strokeCircle(radius, radius, radius - 1.5);
+    graphics.generateTexture(key, radius * 2, radius * 2);
+    graphics.destroy();
   }
 }
