@@ -195,11 +195,11 @@ export class GameScene extends Phaser.Scene {
     const projectileCount = Math.max(1, Math.round(this.player.stats.projectileCount));
     const spreadRadians = Phaser.Math.DegToRad(projectileCount > 3 ? 12 : 8);
 
-    this.showAttackEffect(baseAngle);
+    this.player.fireWeapon(baseAngle);
     for (let index = 0; index < projectileCount; index += 1) {
       const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
       const shotAngle = baseAngle + offset;
-      const muzzleDistance = 30;
+      const muzzleDistance = 44;
       this.projectiles.add(
         new Projectile(
           this,
@@ -214,35 +214,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     return true;
-  }
-
-  private showAttackEffect(angle: number): void {
-    const pulse = this.add.circle(this.player.x, this.player.y, 28, COLORS.projectile, 0.18)
-      .setStrokeStyle(2, COLORS.projectile, 0.75)
-      .setDepth(8);
-    const muzzle = this.add.circle(
-      this.player.x + Math.cos(angle) * 34,
-      this.player.y + Math.sin(angle) * 34,
-      8,
-      COLORS.projectile,
-      0.9,
-    ).setDepth(9);
-
-    this.tweens.add({
-      targets: pulse,
-      scale: 1.75,
-      alpha: 0,
-      duration: 180,
-      ease: 'Quad.easeOut',
-      onComplete: () => pulse.destroy(),
-    });
-    this.tweens.add({
-      targets: muzzle,
-      scale: 0.25,
-      alpha: 0,
-      duration: 130,
-      onComplete: () => muzzle.destroy(),
-    });
   }
 
   private handleProjectileHit(

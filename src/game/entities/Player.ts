@@ -11,8 +11,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     maxHp: 100,
     moveSpeed: 300,
     attackDamage: 10,
-    attackCooldown: 680,
-    projectileSpeed: 540,
+    attackCooldown: 520,
+    projectileSpeed: 780,
     projectileCount: 1,
     attackRange: 1_000,
     pickupRange: 105,
@@ -25,7 +25,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   private readonly cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly movementKeys: MovementKeys;
+  private readonly weapon: Phaser.GameObjects.Image;
   private invulnerableUntil = 0;
+  private aimAngle = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
@@ -37,7 +39,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(10);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(22, 2, 2);
+    body.setCircle(20, 12, 12);
+
+    this.weapon = scene.add.image(x, y, 'weapon')
+      .setOrigin(0.18, 0.5)
+      .setDepth(11);
 
     const keyboard = scene.input.keyboard;
     if (!keyboard) {
@@ -60,10 +66,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.setVelocity(direction.x, direction.y);
+    if (horizontal !== 0) {
+      this.setFlipX(horizontal < 0);
+    }
+    this.weapon.setPosition(this.x, this.y + 3).setRotation(this.aimAngle);
+    this.weapon.setFlipY(Math.cos(this.aimAngle) < 0);
 
     if (this.stats.regeneration > 0 && this.hp < this.stats.maxHp) {
       this.hp = Math.min(this.stats.maxHp, this.hp + this.stats.regeneration * (delta / 1000));
     }
+  }
+
+  fireWeapon(angle: number): void {
+    this.aimAngle = angle;
+    this.weapon.setPosition(this.x, this.y + 3).setRotation(angle);
+    this.scene.tweens.killTweensOf(this.weapon);
+    this.weapon.setScale(0.82, 1.12);
+    this.scene.tweens.add({
+      targets: this.weapon,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 90,
+      ease: 'Back.easeOut',
+    });
   }
 
   takeDamage(amount: number, now: number): boolean {
@@ -95,5 +120,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.stats.maxHp > previousMaxHp) {
       this.hp += this.stats.maxHp - previousMaxHp;
     }
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.weapon?.destroy();
+    super.destroy(fromScene);
   }
 }

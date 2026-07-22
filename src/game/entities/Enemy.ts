@@ -131,5 +131,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       direction.normalize().scale(speed);
     }
     this.setVelocity(direction.x, direction.y);
+    if (this.definition.archetype === 'charger' && direction.lengthSq() > 0) {
+      this.setRotation(direction.angle());
+    } else if (this.definition.archetype === 'normal') {
+      this.setFlipX(direction.x < 0);
+    }
   }
 }
