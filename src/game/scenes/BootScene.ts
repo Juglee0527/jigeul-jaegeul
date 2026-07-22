@@ -10,7 +10,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.createCircleTexture('player', 24, COLORS.player);
-    this.createCircleTexture('projectile', 7, COLORS.projectile);
+    this.createProjectileTexture();
     this.createCircleTexture('experience', 10, 0x6dff8b);
     ENEMY_DEFINITIONS.forEach((enemy) => {
       this.createCircleTexture(`enemy-${enemy.id}`, enemy.radius, enemy.color);
@@ -26,6 +26,16 @@ export class BootScene extends Phaser.Scene {
     graphics.lineStyle(3, COLORS.white, 0.8);
     graphics.strokeCircle(radius, radius, radius - 1.5);
     graphics.generateTexture(key, radius * 2, radius * 2);
+    graphics.destroy();
+  }
+
+  private createProjectileTexture(): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    graphics.fillStyle(COLORS.projectile, 0.25);
+    graphics.fillRoundedRect(0, 0, 30, 12, 6);
+    graphics.fillStyle(COLORS.white);
+    graphics.fillRoundedRect(5, 3, 20, 6, 3);
+    graphics.generateTexture('projectile', 30, 12);
     graphics.destroy();
   }
 }

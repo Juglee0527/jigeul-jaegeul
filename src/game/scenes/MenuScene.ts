@@ -16,101 +16,157 @@ export class MenuScene extends Phaser.Scene {
     const todayRecord = records.dailyRecords[today];
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
+    this.add.grid(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 64, 64, 0x090611, 1, 0x392047, 0.18);
+    this.add.circle(1120, 86, 260, COLORS.secondary, 0.07);
+    this.add.circle(105, 680, 230, COLORS.primary, 0.05);
 
-    this.add
-      .text(GAME_WIDTH / 2, 125, '지긁재긁', {
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '88px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
+    this.add.text(68, 58, '5분 생존 로그라이크', {
+      color: '#ff9bea',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '17px',
+      fontStyle: 'bold',
+      backgroundColor: '#30152c',
+      padding: { x: 12, y: 7 },
+    });
+    this.add.text(64, 112, '지긁재긁', {
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '82px',
+      fontStyle: 'bold',
+      stroke: '#4b1742',
+      strokeThickness: 8,
+    });
+    this.add.text(70, 218, '긁히면 진다.\n버티면 전설이 된다.', {
+      color: '#cfc4dc',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '25px',
+      lineSpacing: 9,
+    });
 
-    this.add
-      .text(GAME_WIDTH / 2, 210, '긁히면 진다.', {
-        color: '#ff4fd8',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '30px',
-      })
-      .setOrigin(0.5);
-
-    this.createButton(GAME_WIDTH / 2 - 180, 340, '게임 시작', () => {
+    this.createModeCard(700, 98, '일반 생존', '매 판 새로운 적과 능력 조합', 'PLAY', true, () => {
       this.startGame({ mode: 'normal', seed: createRandomSeed() });
     });
-    this.createButton(GAME_WIDTH / 2 + 180, 340, '오늘의 도전', () => {
+    this.createModeCard(700, 272, '오늘의 도전', `${today} · 모두 같은 운명`, 'DAILY', false, () => {
       this.startGame({ mode: 'daily', seed: today, dailyDate: today });
-    });
+    }, todayRecord ? `오늘 최고  ${todayRecord.score.toLocaleString('ko-KR')}` : '첫 기록을 남겨보세요');
 
-    this.createButton(GAME_WIDTH / 2, 445, '게임 방법', () => {
+    this.createSmallButton(700, 462, '게임 방법  →', () => {
       this.scene.launch('HelpScene');
       this.scene.pause();
-    }, 270, 64, 25);
+    });
 
-    this.add
-      .text(
-        GAME_WIDTH / 2,
-        515,
-        `오늘의 시드 ${today}${todayRecord ? `  ·  오늘 최고 ${todayRecord.score}` : '  ·  첫 도전 대기 중'}`,
-        {
-          color: '#d9c4ff',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: '20px',
-        },
-      )
-      .setOrigin(0.5);
+    this.add.text(68, 386, 'MY RECORD', {
+      color: '#8f7ca3',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      letterSpacing: 2,
+    });
+    this.createStat(68, 422, '최고 점수', records.highScore.toLocaleString('ko-KR'));
+    this.createStat(270, 422, '최장 생존', this.formatTime(records.longestSurvivalSeconds));
+    this.createStat(68, 515, '최대 처치', records.maxKills.toString());
+    this.createStat(270, 515, '최고 콤보', `x${records.maxCombo}`);
 
-    this.add
-      .text(GAME_WIDTH / 2, 650, 'Enter를 누르면 일반 게임을 시작합니다', {
-        color: '#aaa0bb',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '18px',
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(
-        GAME_WIDTH / 2,
-        585,
-        `최고 점수 ${records.highScore}  ·  최장 생존 ${this.formatTime(records.longestSurvivalSeconds)}  ·  최대 처치 ${records.maxKills}  ·  최고 콤보 x${records.maxCombo}`,
-        {
-          color: '#cfc4dc',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: '20px',
-        },
-      )
-      .setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, 'ENTER 빠른 시작  ·  WASD / 방향키 이동  ·  ESC 일시정지', {
+      color: '#6f6578',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '15px',
+    }).setOrigin(0.5);
 
     this.input.keyboard?.once('keydown-ENTER', () => {
       this.startGame({ mode: 'normal', seed: createRandomSeed() });
     });
   }
 
-  private createButton(
+  private createModeCard(
     x: number,
     y: number,
-    label: string,
+    title: string,
+    description: string,
+    badge: string,
+    primary: boolean,
     onClick: () => void,
-    width = 320,
-    height = 82,
-    fontSize = 31,
+    meta?: string,
   ): void {
-    const button = this.add
-      .rectangle(x, y, width, height, COLORS.secondary)
-      .setStrokeStyle(3, COLORS.white, 0.8)
+    const width = 510;
+    const height = 148;
+    const fill = primary ? 0x25112b : 0x15101d;
+    const stroke = primary ? COLORS.primary : 0x604579;
+    const card = this.add.rectangle(x, y, width, height, fill, 0.97)
+      .setOrigin(0)
+      .setStrokeStyle(primary ? 2 : 1, stroke, 0.9)
       .setInteractive({ useHandCursor: true });
 
-    this.add
-      .text(x, y, label, {
-        color: '#ffffff',
+    this.add.text(x + 28, y + 24, badge, {
+      color: primary ? '#ff9bea' : '#aa90d4',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '13px',
+      fontStyle: 'bold',
+    });
+    this.add.text(x + 28, y + 52, title, {
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '30px',
+      fontStyle: 'bold',
+    });
+    this.add.text(x + 28, y + 98, description, {
+      color: '#a99eb8',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '17px',
+    });
+    this.add.text(x + width - 30, y + 62, '→', {
+      color: primary ? '#fff36b' : '#bda8d8',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '38px',
+      fontStyle: 'bold',
+    }).setOrigin(1, 0.5);
+    if (meta) {
+      this.add.text(x + width - 28, y + 112, meta, {
+        color: '#7f708e',
         fontFamily: 'system-ui, sans-serif',
-        fontSize: `${fontSize}px`,
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
+        fontSize: '14px',
+      }).setOrigin(1, 0);
+    }
 
-    button.on('pointerover', () => button.setFillStyle(COLORS.primary));
-    button.on('pointerout', () => button.setFillStyle(COLORS.secondary));
+    card.on('pointerover', () => {
+      card.setFillStyle(primary ? 0x3c173f : 0x21172d);
+      card.setScale(1.015);
+    });
+    card.on('pointerout', () => {
+      card.setFillStyle(fill);
+      card.setScale(1);
+    });
+    card.on('pointerdown', onClick);
+  }
+
+  private createSmallButton(x: number, y: number, label: string, onClick: () => void): void {
+    const button = this.add.rectangle(x, y, 510, 64, 0x0f0b15, 0.95)
+      .setOrigin(0)
+      .setStrokeStyle(1, 0x44334f, 1)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(x + 26, y + 20, label, {
+      color: '#d8cce2',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '18px',
+      fontStyle: 'bold',
+    });
+    button.on('pointerover', () => button.setFillStyle(0x21172d));
+    button.on('pointerout', () => button.setFillStyle(0x0f0b15));
     button.on('pointerdown', onClick);
+  }
+
+  private createStat(x: number, y: number, label: string, value: string): void {
+    this.add.text(x, y, label, {
+      color: '#7f7489',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+    });
+    this.add.text(x, y + 24, value, {
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '28px',
+      fontStyle: 'bold',
+    });
   }
 
   private startGame(session: GameSession): void {

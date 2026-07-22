@@ -111,7 +111,7 @@ interface WaveConfig {
 ```text
 입력 → Player 이동
 Game Clock → WaveSystem → EnemySpawner
-자동 공격 타이머 → 대상 탐색 → Projectile
+자동 공격 타이머 → 전역 최근접 대상 탐색 → 방향성 Projectile 일제 사격
 충돌 → 피해 → 적 사망 → 경험치/처치/콤보
 경험치 획득 → LevelSystem → UpgradeScene
 플레이어 사망 → GameResult → 점수 계산 → StorageService → ResultScene
@@ -167,7 +167,7 @@ interface SavedGameData {
 - 적의 최대 수를 웨이브에 명시
 - 경험치 아이템은 동시에 최대 180개로 제한
 - 매 프레임 전체 적 배열 정렬 금지
-- 자동 공격 시 가장 가까운 대상은 단일 순회로 탐색
+- 자동 공격 시 화면 전체의 가장 가까운 대상은 단일 순회로 탐색하며, 대상이 없으면 쿨다운을 소비하지 않음
 - 경험치가 과도하면 가까운 아이템 병합 고려
 - 오브젝트 풀링은 프로파일링에서 필요성이 확인된 대상부터 도입
 

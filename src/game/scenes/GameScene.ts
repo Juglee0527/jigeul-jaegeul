@@ -139,8 +139,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    if (this.activePlayTimeMs >= this.nextAttackAt) {
-      this.autoAttack();
+    if (this.activePlayTimeMs >= this.nextAttackAt && this.autoAttack()) {
       this.nextAttackAt = this.activePlayTimeMs + this.player.stats.attackCooldown;
     }
 
@@ -162,13 +161,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private autoAttack(): void {
+  private autoAttack(): boolean {
     if (this.gameEnded || !this.player.active) {
-      return;
+      return false;
     }
 
     let nearestEnemy: Enemy | undefined;
-    let nearestDistanceSquared = this.player.stats.attackRange ** 2;
+    let nearestDistanceSquared = Number.POSITIVE_INFINITY;
 
     this.enemies.getChildren().forEach((gameObject) => {
       const enemy = gameObject as Enemy;
@@ -183,30 +182,67 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    if (nearestEnemy) {
-      const baseAngle = Phaser.Math.Angle.Between(
-        this.player.x,
-        this.player.y,
-        nearestEnemy.x,
-        nearestEnemy.y,
-      );
-      const projectileCount = Math.round(this.player.stats.projectileCount);
-      const spreadRadians = Phaser.Math.DegToRad(10);
-
-      for (let index = 0; index < projectileCount; index += 1) {
-        const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
-        this.projectiles.add(
-          new Projectile(
-            this,
-            this.player.x,
-            this.player.y,
-            baseAngle + offset,
-            this.player.stats.projectileSpeed,
-            this.player.stats.attackDamage,
-          ),
-        );
-      }
+    if (!nearestEnemy) {
+      return false;
     }
+
+    const baseAngle = Phaser.Math.Angle.Between(
+      this.player.x,
+      this.player.y,
+      nearestEnemy.x,
+      nearestEnemy.y,
+    );
+    const projectileCount = Math.max(1, Math.round(this.player.stats.projectileCount));
+    const spreadRadians = Phaser.Math.DegToRad(projectileCount > 3 ? 12 : 8);
+
+    this.showAttackEffect(baseAngle);
+    for (let index = 0; index < projectileCount; index += 1) {
+      const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
+      const shotAngle = baseAngle + offset;
+      const muzzleDistance = 30;
+      this.projectiles.add(
+        new Projectile(
+          this,
+          this.player.x + Math.cos(shotAngle) * muzzleDistance,
+          this.player.y + Math.sin(shotAngle) * muzzleDistance,
+          shotAngle,
+          this.player.stats.projectileSpeed,
+          this.player.stats.attackDamage,
+          this.player.stats.attackRange,
+        ),
+      );
+    }
+
+    return true;
+  }
+
+  private showAttackEffect(angle: number): void {
+    const pulse = this.add.circle(this.player.x, this.player.y, 28, COLORS.projectile, 0.18)
+      .setStrokeStyle(2, COLORS.projectile, 0.75)
+      .setDepth(8);
+    const muzzle = this.add.circle(
+      this.player.x + Math.cos(angle) * 34,
+      this.player.y + Math.sin(angle) * 34,
+      8,
+      COLORS.projectile,
+      0.9,
+    ).setDepth(9);
+
+    this.tweens.add({
+      targets: pulse,
+      scale: 1.75,
+      alpha: 0,
+      duration: 180,
+      ease: 'Quad.easeOut',
+      onComplete: () => pulse.destroy(),
+    });
+    this.tweens.add({
+      targets: muzzle,
+      scale: 0.25,
+      alpha: 0,
+      duration: 130,
+      onComplete: () => muzzle.destroy(),
+    });
   }
 
   private handleProjectileHit(
