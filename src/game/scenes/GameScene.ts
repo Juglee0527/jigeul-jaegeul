@@ -271,6 +271,9 @@ export class GameScene extends Phaser.Scene {
     if (this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs)) {
       this.cameras.main.shake(90, 0.006);
       this.cameras.main.flash(80, 255, 38, 70, false);
+      if (this.player.hp <= 0) {
+        this.endGame(this.activePlayTimeMs / 1000);
+      }
     }
   }
 
@@ -361,6 +364,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endGame(survivalSeconds: number): void {
+    if (this.gameEnded) {
+      return;
+    }
     this.gameEnded = true;
     this.physics.pause();
     this.player.setTint(0x555555);

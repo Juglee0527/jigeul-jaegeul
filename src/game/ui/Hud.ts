@@ -12,6 +12,7 @@ export class Hud {
   private readonly hpBar: Phaser.GameObjects.Rectangle;
   private readonly hpText: Phaser.GameObjects.Text;
   private readonly levelText: Phaser.GameObjects.Text;
+  private readonly xpText: Phaser.GameObjects.Text;
   private readonly xpBar: Phaser.GameObjects.Rectangle;
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
@@ -50,6 +51,9 @@ export class Hud {
     this.levelText = scene.add.text(40, 80, '', {
       color: '#ffffff', fontFamily: 'system-ui, sans-serif', fontSize: '16px', fontStyle: 'bold',
     }).setDepth(HUD_DEPTH + 1);
+    this.xpText = scene.add.text(GAME_WIDTH - 40, 78, '', {
+      color: '#d8c9ff', fontFamily: 'system-ui, sans-serif', fontSize: '14px', fontStyle: 'bold',
+    }).setOrigin(1, 0).setDepth(HUD_DEPTH + 2);
     scene.add.rectangle(112, 91, GAME_WIDTH - 152, 8, 0x24172d, 0.95)
       .setOrigin(0, 0.5).setDepth(HUD_DEPTH);
     this.xpBar = scene.add.rectangle(112, 91, GAME_WIDTH - 152, 8, COLORS.secondary, 1)
@@ -107,6 +111,7 @@ export class Hud {
     this.hpBar.setFillStyle(hpRatio <= 0.3 ? 0xff5c72 : COLORS.primary);
     this.hpText.setText(`${Math.ceil(hp)} / ${Math.round(maxHp)}`);
     this.levelText.setText(`LV.${level}`);
+    this.xpText.setText(`EXP ${experience} / ${requiredExperience}  (${Math.floor(xpRatio * 100)}%)`);
     this.xpBar.displayWidth = (GAME_WIDTH - 152) * xpRatio;
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치  ${killCount}`);

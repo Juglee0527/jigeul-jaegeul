@@ -6,11 +6,18 @@ import { StorageService } from '../services/StorageService';
 import type { GameSession } from '../types/game';
 
 export class MenuScene extends Phaser.Scene {
+  private menuCards: Phaser.GameObjects.Rectangle[] = [];
+  private menuActions: Array<() => void> = [];
+  private selectedIndex = 0;
+
   constructor() {
     super('MenuScene');
   }
 
   create(): void {
+    this.menuCards = [];
+    this.menuActions = [];
+    this.selectedIndex = 0;
     const records = new StorageService().load();
     const today = getLocalDateSeed();
     const todayRecord = records.dailyRecords[today];
@@ -54,6 +61,7 @@ export class MenuScene extends Phaser.Scene {
       this.scene.launch('HelpScene');
       this.scene.pause();
     });
+    this.renderSelection();
 
     this.add.text(68, 386, 'MY RECORD', {
       color: '#8f7ca3',
@@ -67,14 +75,20 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
     this.createStat(270, 515, '생존 목표', '05:00');
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, 'ENTER 빠른 시작  ·  WASD / 방향키 이동  ·  ESC 일시정지', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '↑ ↓ 메뉴 선택  ·  ENTER 확인  ·  WASD / 방향키 이동', {
       color: '#6f6578',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
     }).setOrigin(0.5);
 
-    this.input.keyboard?.once('keydown-ENTER', () => {
-      this.startGame({ mode: 'normal', seed: createRandomSeed() });
+    const keyboard = this.input.keyboard;
+    keyboard?.on('keydown-UP', this.selectPrevious, this);
+    keyboard?.on('keydown-DOWN', this.selectNext, this);
+    keyboard?.on('keydown-ENTER', this.activateSelection, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keyboard?.off('keydown-UP', this.selectPrevious, this);
+      keyboard?.off('keydown-DOWN', this.selectNext, this);
+      keyboard?.off('keydown-ENTER', this.activateSelection, this);
     });
   }
 
@@ -95,7 +109,11 @@ export class MenuScene extends Phaser.Scene {
     const card = this.add.rectangle(x, y, width, height, fill, 0.97)
       .setOrigin(0)
       .setStrokeStyle(primary ? 2 : 1, stroke, 0.9)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setData({ fill, stroke, strokeWidth: primary ? 2 : 1 });
+    const menuIndex = this.menuCards.length;
+    this.menuCards.push(card);
+    this.menuActions.push(onClick);
 
     this.add.text(x + 28, y + 24, badge, {
       color: primary ? '#ff9bea' : '#aa90d4',
@@ -128,31 +146,64 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(1, 0);
     }
 
-    card.on('pointerover', () => {
-      card.setFillStyle(primary ? 0x3c173f : 0x21172d);
-      card.setScale(1.015);
-    });
-    card.on('pointerout', () => {
-      card.setFillStyle(fill);
-      card.setScale(1);
-    });
-    card.on('pointerdown', onClick);
+    card.on('pointerover', () => this.setSelectedIndex(menuIndex));
+    card.on('pointerout', () => this.renderSelection());
+    card.on('pointerdown', () => this.activateIndex(menuIndex));
   }
 
   private createSmallButton(x: number, y: number, label: string, onClick: () => void): void {
     const button = this.add.rectangle(x, y, 510, 64, 0x0f0b15, 0.95)
       .setOrigin(0)
       .setStrokeStyle(1, 0x44334f, 1)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setData({ fill: 0x0f0b15, stroke: 0x44334f, strokeWidth: 1 });
+    const menuIndex = this.menuCards.length;
+    this.menuCards.push(button);
+    this.menuActions.push(onClick);
     this.add.text(x + 26, y + 20, label, {
       color: '#d8cce2',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '18px',
       fontStyle: 'bold',
     });
-    button.on('pointerover', () => button.setFillStyle(0x21172d));
-    button.on('pointerout', () => button.setFillStyle(0x0f0b15));
-    button.on('pointerdown', onClick);
+    button.on('pointerover', () => this.setSelectedIndex(menuIndex));
+    button.on('pointerout', () => this.renderSelection());
+    button.on('pointerdown', () => this.activateIndex(menuIndex));
+  }
+
+  private selectPrevious(): void {
+    this.setSelectedIndex(this.selectedIndex - 1);
+  }
+
+  private selectNext(): void {
+    this.setSelectedIndex(this.selectedIndex + 1);
+  }
+
+  private setSelectedIndex(index: number): void {
+    this.selectedIndex = Phaser.Math.Wrap(index, 0, this.menuCards.length);
+    this.renderSelection();
+  }
+
+  private renderSelection(): void {
+    this.menuCards.forEach((card, index) => {
+      const selected = index === this.selectedIndex;
+      card.setFillStyle(selected ? 0x3c173f : card.getData('fill') as number);
+      card.setStrokeStyle(
+        selected ? 4 : card.getData('strokeWidth') as number,
+        selected ? COLORS.projectile : card.getData('stroke') as number,
+        selected ? 1 : 0.9,
+      );
+      card.setScale(selected ? 1.015 : 1);
+    });
+  }
+
+  private activateSelection(): void {
+    this.activateIndex(this.selectedIndex);
+  }
+
+  private activateIndex(index: number): void {
+    this.setSelectedIndex(index);
+    this.menuActions[index]?.();
   }
 
   private createStat(x: number, y: number, label: string, value: string): void {

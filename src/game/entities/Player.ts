@@ -72,7 +72,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weapon.setPosition(this.x, this.y + 3).setRotation(this.aimAngle);
     this.weapon.setFlipY(Math.cos(this.aimAngle) < 0);
 
-    if (this.stats.regeneration > 0 && this.hp < this.stats.maxHp) {
+    if (this.hp > 0 && this.stats.regeneration > 0 && this.hp < this.stats.maxHp) {
       this.hp = Math.min(this.stats.maxHp, this.hp + this.stats.regeneration * (delta / 1000));
     }
   }
