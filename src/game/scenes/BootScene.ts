@@ -11,6 +11,7 @@ export class BootScene extends Phaser.Scene {
     this.createCircleTexture('player', 24, COLORS.player);
     this.createCircleTexture('enemy', 22, COLORS.enemy);
     this.createCircleTexture('projectile', 7, COLORS.projectile);
+    this.createCircleTexture('experience', 10, 0x6dff8b);
 
     this.scene.start('MenuScene');
   }

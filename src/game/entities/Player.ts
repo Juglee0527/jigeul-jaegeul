@@ -1,14 +1,27 @@
 import Phaser from 'phaser';
 
-const MOVE_SPEED = 300;
-const MAX_HP = 100;
+import type { PlayerStats, StatModifier } from '../types/game';
+
 const INVULNERABILITY_MS = 800;
 
 type MovementKeys = Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-  readonly maxHp = MAX_HP;
-  hp = MAX_HP;
+  readonly stats: PlayerStats = {
+    maxHp: 100,
+    moveSpeed: 300,
+    attackDamage: 10,
+    attackCooldown: 450,
+    projectileSpeed: 650,
+    projectileCount: 1,
+    attackRange: 700,
+    pickupRange: 105,
+    armor: 0,
+    regeneration: 0,
+    enemySpeedMultiplier: 1,
+  };
+
+  hp = this.stats.maxHp;
 
   private readonly cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
   private readonly movementKeys: MovementKeys;
@@ -35,7 +48,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.movementKeys = keyboard.addKeys('W,A,S,D') as MovementKeys;
   }
 
-  update(): void {
+  update(delta: number): void {
     const horizontal = Number(this.cursorKeys.right.isDown || this.movementKeys.D.isDown)
       - Number(this.cursorKeys.left.isDown || this.movementKeys.A.isDown);
     const vertical = Number(this.cursorKeys.down.isDown || this.movementKeys.S.isDown)
@@ -43,10 +56,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const direction = new Phaser.Math.Vector2(horizontal, vertical);
     if (direction.lengthSq() > 0) {
-      direction.normalize().scale(MOVE_SPEED);
+      direction.normalize().scale(this.stats.moveSpeed);
     }
 
     this.setVelocity(direction.x, direction.y);
+
+    if (this.stats.regeneration > 0 && this.hp < this.stats.maxHp) {
+      this.hp = Math.min(this.stats.maxHp, this.hp + this.stats.regeneration * (delta / 1000));
+    }
   }
 
   takeDamage(amount: number, now: number): boolean {
@@ -54,7 +71,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
-    this.hp = Math.max(0, this.hp - amount);
+    const reducedDamage = Math.max(1, amount - this.stats.armor);
+    this.hp = Math.max(0, this.hp - reducedDamage);
     this.invulnerableUntil = now + INVULNERABILITY_MS;
 
     this.setTint(0xff334f);
@@ -65,5 +83,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
 
     return true;
+  }
+
+  applyStatModifier(modifier: StatModifier): void {
+    const previousMaxHp = this.stats.maxHp;
+    const currentValue = this.stats[modifier.stat];
+    this.stats[modifier.stat] = modifier.operation === 'add'
+      ? currentValue + modifier.value
+      : currentValue * modifier.value;
+
+    if (this.stats.maxHp > previousMaxHp) {
+      this.hp += this.stats.maxHp - previousMaxHp;
+    }
   }
 }

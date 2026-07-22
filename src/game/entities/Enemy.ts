@@ -16,10 +16,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     body.setCircle(20, 2, 2);
   }
 
-  chase(target: Phaser.GameObjects.Components.Transform): void {
+  chase(target: Phaser.GameObjects.Components.Transform, speedMultiplier: number): void {
     const direction = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
     if (direction.lengthSq() > 0) {
-      direction.normalize().scale(ENEMY_SPEED);
+      direction.normalize().scale(ENEMY_SPEED * speedMultiplier);
     }
     this.setVelocity(direction.x, direction.y);
   }

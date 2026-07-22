@@ -4,7 +4,7 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import type { GameResult } from '../types/game';
 
 export class ResultScene extends Phaser.Scene {
-  private result: GameResult = { survivalSeconds: 0, killCount: 0 };
+  private result: GameResult = { survivalSeconds: 0, killCount: 0, level: 1 };
 
   constructor() {
     super('ResultScene');
@@ -30,7 +30,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         300,
-        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}`,
+        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}`,
         {
           align: 'center',
           color: '#ffffff',

@@ -4,6 +4,7 @@ import { COLORS, GAME_WIDTH } from '../config/constants';
 
 export class Hud {
   private readonly hpText: Phaser.GameObjects.Text;
+  private readonly levelText: Phaser.GameObjects.Text;
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
 
@@ -17,6 +18,7 @@ export class Hud {
 
     scene.add.rectangle(GAME_WIDTH / 2, 32, GAME_WIDTH, 64, COLORS.panel, 0.92).setDepth(50);
     this.hpText = scene.add.text(28, 18, '', textStyle).setDepth(51);
+    this.levelText = scene.add.text(310, 18, '', textStyle).setDepth(51);
     this.timerText = scene.add.text(GAME_WIDTH / 2, 18, '', textStyle).setOrigin(0.5, 0).setDepth(51);
     this.killText = scene.add.text(GAME_WIDTH - 28, 18, '', textStyle).setOrigin(1, 0).setDepth(51);
 
@@ -29,8 +31,17 @@ export class Hud {
       .setDepth(51);
   }
 
-  update(hp: number, maxHp: number, survivalSeconds: number, killCount: number): void {
-    this.hpText.setText(`멘탈 ${hp} / ${maxHp}`);
+  update(
+    hp: number,
+    maxHp: number,
+    level: number,
+    experience: number,
+    requiredExperience: number,
+    survivalSeconds: number,
+    killCount: number,
+  ): void {
+    this.hpText.setText(`멘탈 ${Math.ceil(hp)} / ${maxHp}`);
+    this.levelText.setText(`Lv.${level}  EXP ${experience} / ${requiredExperience}`);
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치 ${killCount}`);
   }
