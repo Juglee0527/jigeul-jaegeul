@@ -9,6 +9,9 @@ import type { GameResult, GameSession } from '../types/game';
 
 export class ResultScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
+  private buttons: Phaser.GameObjects.Rectangle[] = [];
+  private buttonActions: Array<() => void> = [];
+  private selectedIndex = 0;
   private result: GameResult = {
     survivalSeconds: 0,
     killCount: 0,
@@ -28,6 +31,9 @@ export class ResultScene extends Phaser.Scene {
 
   create(): void {
     this.audio.setMood('result');
+    this.buttons = [];
+    this.buttonActions = [];
+    this.selectedIndex = 0;
     const finalScore = calculateFinalScore(this.result);
     const recordUpdate = new StorageService().updateRecords(this.result, finalScore);
 
@@ -133,10 +139,16 @@ export class ResultScene extends Phaser.Scene {
       this.scene.start('MenuScene');
     });
 
-    this.input.keyboard?.once('keydown-ENTER', () => {
-      this.audio.play('confirm');
-      this.audio.setMood('game');
-      this.scene.start('GameScene', { session: this.getSession() });
+    this.renderSelection();
+
+    const keyboard = this.input.keyboard;
+    keyboard?.on('keydown-LEFT', this.selectPrevious, this);
+    keyboard?.on('keydown-RIGHT', this.selectNext, this);
+    keyboard?.on('keydown-ENTER', this.activateSelection, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keyboard?.off('keydown-LEFT', this.selectPrevious, this);
+      keyboard?.off('keydown-RIGHT', this.selectNext, this);
+      keyboard?.off('keydown-ENTER', this.activateSelection, this);
     });
   }
 
@@ -144,7 +156,11 @@ export class ResultScene extends Phaser.Scene {
     const button = this.add
       .rectangle(x, y, 280, 76, COLORS.secondary)
       .setStrokeStyle(2, COLORS.white, 0.8)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setData({ fill: COLORS.secondary });
+    const buttonIndex = this.buttons.length;
+    this.buttons.push(button);
+    this.buttonActions.push(onClick);
 
     this.add
       .text(x, y, label, {
@@ -155,9 +171,42 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    button.on('pointerover', () => button.setFillStyle(COLORS.primary));
-    button.on('pointerout', () => button.setFillStyle(COLORS.secondary));
-    button.on('pointerdown', onClick);
+    button.on('pointerover', () => this.setSelectedIndex(buttonIndex));
+    button.on('pointerout', () => this.renderSelection());
+    button.on('pointerdown', () => this.activateIndex(buttonIndex));
+  }
+
+  private selectPrevious(): void {
+    this.audio.play('navigate');
+    this.setSelectedIndex(this.selectedIndex - 1);
+  }
+
+  private selectNext(): void {
+    this.audio.play('navigate');
+    this.setSelectedIndex(this.selectedIndex + 1);
+  }
+
+  private setSelectedIndex(index: number): void {
+    this.selectedIndex = Phaser.Math.Wrap(index, 0, this.buttons.length);
+    this.renderSelection();
+  }
+
+  private renderSelection(): void {
+    this.buttons.forEach((button, index) => {
+      const selected = index === this.selectedIndex;
+      button.setFillStyle(selected ? COLORS.primary : button.getData('fill') as number);
+      button.setStrokeStyle(selected ? 4 : 2, selected ? COLORS.projectile : COLORS.white, selected ? 1 : 0.8);
+      button.setScale(selected ? 1.04 : 1);
+    });
+  }
+
+  private activateSelection(): void {
+    this.activateIndex(this.selectedIndex);
+  }
+
+  private activateIndex(index: number): void {
+    this.setSelectedIndex(index);
+    this.buttonActions[index]?.();
   }
 
   private formatTime(totalSeconds: number): string {
