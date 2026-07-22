@@ -59,13 +59,17 @@ export class BootScene extends Phaser.Scene {
 
   private createProjectileTexture(): void {
     const g = this.make.graphics({ x: 0, y: 0 });
-    g.fillStyle(COLORS.projectile, 0.18);
-    g.fillRoundedRect(0, 0, 34, 14, 7);
+    g.fillStyle(COLORS.projectile, 0.08);
+    g.fillRoundedRect(0, 1, 52, 16, 8);
+    g.fillStyle(COLORS.primary, 0.18);
+    g.fillTriangle(0, 9, 27, 3, 27, 15);
+    g.fillStyle(COLORS.projectile, 0.42);
+    g.fillRoundedRect(13, 4, 35, 10, 5);
     g.fillStyle(COLORS.projectile);
-    g.fillRoundedRect(5, 3, 27, 8, 4);
+    g.fillRoundedRect(24, 5, 27, 8, 4);
     g.fillStyle(0xffffff);
-    g.fillRoundedRect(13, 5, 16, 4, 2);
-    g.generateTexture('projectile', 34, 14);
+    g.fillRoundedRect(34, 7, 15, 4, 2);
+    g.generateTexture('projectile', 52, 18);
     g.destroy();
   }
 

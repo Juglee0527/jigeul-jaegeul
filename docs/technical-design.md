@@ -111,7 +111,7 @@ interface WaveConfig {
 ```text
 입력 → Player 이동
 Game Clock → WaveSystem → EnemySpawner
-자동 공격 타이머 → 전역 최근접 대상 탐색 → Player 부착 총기 회전·반동 → 방향성 Projectile 일제 사격
+자동 공격 타이머 → 전역 최근접 대상 탐색 → Player 부착 총기 회전·반동 → 매 프레임 직접 이동하는 방향성 Projectile 일제 사격
 충돌 → 피해 → 적 사망 → 경험치/처치/콤보
 경험치 획득 → LevelSystem → UpgradeScene
 플레이어 사망 → GameResult → 점수 계산 → StorageService → ResultScene

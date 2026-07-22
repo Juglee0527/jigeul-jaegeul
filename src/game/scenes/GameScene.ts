@@ -138,6 +138,10 @@ export class GameScene extends Phaser.Scene {
         gem.updateAttraction(this.player);
       }
     });
+    this.projectiles.getChildren().forEach((gameObject) => {
+      const projectile = gameObject as Projectile;
+      projectile.updateTravel(delta);
+    });
 
     if (this.activePlayTimeMs >= this.nextAttackAt && this.autoAttack()) {
       this.nextAttackAt = this.activePlayTimeMs + this.player.stats.attackCooldown;
@@ -231,6 +235,7 @@ export class GameScene extends Phaser.Scene {
     const dropY = enemy.y;
     const damage = projectile.damage;
     projectile.destroy();
+    this.showHitEffect(dropX, dropY);
     if (enemy.takeDamage(damage)) {
       this.scoreSystem.registerKill(this.activePlayTimeMs);
       this.showKillEffect(dropX, dropY, enemy.experienceValue);
@@ -335,6 +340,19 @@ export class GameScene extends Phaser.Scene {
       duration: 520,
       ease: 'Quad.easeOut',
       onComplete: () => rewardText.destroy(),
+    });
+  }
+
+  private showHitEffect(x: number, y: number): void {
+    const spark = this.add.star(x, y, 5, 3, 11, COLORS.projectile, 0.95).setDepth(19);
+    this.tweens.add({
+      targets: spark,
+      angle: 45,
+      scale: 1.8,
+      alpha: 0,
+      duration: 110,
+      ease: 'Quad.easeOut',
+      onComplete: () => spark.destroy(),
     });
   }
 
