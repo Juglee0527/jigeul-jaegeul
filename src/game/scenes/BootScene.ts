@@ -123,7 +123,7 @@ export class BootScene extends Phaser.Scene {
 
     if (enemy.id === 'lol') {
       this.drawChatEnemy(g, size, enemy.color, true);
-    } else if (enemy.id === 'okay') {
+    } else if (enemy.id === 'okay' || enemy.archetype === 'wanderer') {
       this.drawChatEnemy(g, size, enemy.color, false);
     } else if (enemy.id === 'five-minutes') {
       this.drawAlarmEnemy(g, size, enemy.color);

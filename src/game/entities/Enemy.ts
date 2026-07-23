@@ -19,6 +19,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private chargingUntil = 0;
   private nextChargeAt = 0;
   private charging = false;
+  private readonly wanderPhase: number;
 
   get healthRatio(): number {
     return this.hp / this.maxHp;
@@ -43,13 +44,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.experienceValue = definition.experienceValue;
     this.isBoss = definition.isBoss ?? false;
     this.enemyId = definition.id;
+    this.wanderPhase = ((x * 0.013) + (y * 0.017)) % (Math.PI * 2);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(6);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(definition.radius - 2, 2, 2);
+    const collisionRadius = Math.max(10, Math.round(definition.radius * 0.58));
+    const collisionOffset = definition.radius - collisionRadius;
+    body.setCircle(collisionRadius, collisionOffset, collisionOffset);
+    body.setCollideWorldBounds(true);
 
     this.messageLabel = scene.add
       .text(x, y - definition.radius - 10, message, {
@@ -91,6 +96,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (this.definition.archetype === 'charger') {
       this.updateCharger(time, target, globalSpeedMultiplier);
+      return;
+    }
+    if (this.definition.archetype === 'wanderer') {
+      this.updateWanderer(time, globalSpeedMultiplier);
       return;
     }
 
@@ -183,5 +192,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     } else if (this.definition.archetype === 'normal') {
       this.setFlipX(direction.x < 0);
     }
+  }
+
+  private updateWanderer(time: number, globalSpeedMultiplier: number): void {
+    const angle = this.wanderPhase
+      + time * 0.00042
+      + Math.sin(time * 0.0011 + this.wanderPhase) * 0.85;
+    const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
+    this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    this.setRotation(angle);
   }
 }

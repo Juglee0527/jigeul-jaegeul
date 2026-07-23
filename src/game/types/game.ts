@@ -71,7 +71,7 @@ export interface UpgradeDefinition {
   modifiers: readonly StatModifier[];
 }
 
-export type EnemyArchetype = 'normal' | 'charger' | 'tank';
+export type EnemyArchetype = 'normal' | 'wanderer' | 'charger' | 'tank';
 
 export interface EnemyDefinition {
   id: string;

@@ -27,6 +27,7 @@ export const WAVES: readonly WaveConfig[] = [
     enemies: [
       { enemyId: 'lol', weight: 5 },
       { enemyId: 'okay', weight: 3 },
+      { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 2 },
     ],
   },
@@ -42,6 +43,7 @@ export const WAVES: readonly WaveConfig[] = [
     enemies: [
       { enemyId: 'lol', weight: 4 },
       { enemyId: 'okay', weight: 3 },
+      { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 2 },
       { enemyId: 'urgent-deploy', weight: 2 },
     ],
@@ -58,6 +60,7 @@ export const WAVES: readonly WaveConfig[] = [
     enemies: [
       { enemyId: 'lol', weight: 3 },
       { enemyId: 'okay', weight: 2 },
+      { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 3 },
       { enemyId: 'urgent-deploy', weight: 3 },
       { enemyId: 'two-hour-meeting', weight: 2 },
@@ -75,6 +78,7 @@ export const WAVES: readonly WaveConfig[] = [
     enemies: [
       { enemyId: 'lol', weight: 2 },
       { enemyId: 'okay', weight: 2 },
+      { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 3 },
       { enemyId: 'urgent-deploy', weight: 4 },
       { enemyId: 'two-hour-meeting', weight: 3 },

@@ -53,7 +53,7 @@ export class MenuScene extends Phaser.Scene {
       lineSpacing: 9,
     });
 
-    this.createModeCard(700, 98, '일반 생존', '매 판 새로운 적과 능력 조합', 'PLAY', true, () => {
+    this.createModeCard(700, 98, '일반 생존', '3단계 보스와 매 판 새로운 능력 조합', 'PLAY', true, () => {
       this.startGame({ mode: 'normal', seed: createRandomSeed() });
     });
     this.createModeCard(700, 272, '오늘의 도전', `${today} · 똑같은 패턴`, 'DAILY', false, () => {
