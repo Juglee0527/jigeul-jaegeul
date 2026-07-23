@@ -5,7 +5,13 @@ import { createRandomSeed } from '../services/SeededRandom';
 import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
 import { calculateFinalScore } from '../systems/ScoreSystem';
-import type { GameResult, GameSession } from '../types/game';
+import type { GameDifficulty, GameResult, GameSession } from '../types/game';
+
+const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
+  easy: '쉬움',
+  normal: '보통',
+  hard: '어려움',
+};
 
 export class ResultScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
@@ -18,6 +24,7 @@ export class ResultScene extends Phaser.Scene {
     level: 1,
     bossKillCount: 0,
     mode: 'normal',
+    difficulty: 'normal',
     seed: 'unknown',
   };
 
@@ -52,7 +59,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         135,
-        this.result.mode === 'daily' ? '오늘의 도전' : '일반 플레이',
+        `${this.result.mode === 'daily' ? '오늘의 도전' : '일반 플레이'} · ${DIFFICULTY_LABELS[this.result.difficulty]}`,
         {
           color: this.result.mode === 'daily' ? '#d9c4ff' : '#aaa0bb',
           fontFamily: 'system-ui, sans-serif',
@@ -217,11 +224,16 @@ export class ResultScene extends Phaser.Scene {
 
   private getSession(): GameSession {
     if (this.result.mode === 'normal') {
-      return { mode: 'normal', seed: createRandomSeed() };
+      return {
+        mode: 'normal',
+        difficulty: this.result.difficulty,
+        seed: createRandomSeed(),
+      };
     }
 
     return {
       mode: 'daily',
+      difficulty: this.result.difficulty,
       seed: this.result.seed,
       ...(this.result.dailyDate ? { dailyDate: this.result.dailyDate } : {}),
     };

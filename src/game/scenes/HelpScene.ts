@@ -27,6 +27,7 @@ export class HelpScene extends Phaser.Scene {
     const instructions = [
       ['이동', 'WASD 또는 방향키'],
       ['공격', '가장 가까운 적에게 자동 발사'],
+      ['난이도', '쉬움 ×0.5 · 보통 ×1.0 · 어려움 ×1.5'],
       ['성장', '능력은 일반·희귀·에픽·전설, 최대 3레벨'],
       ['보스', '3분·6분·10분 등장 · 전투 중 시간 정지'],
       ['보물', '보스를 처치하고 전설 능력 획득'],
@@ -35,7 +36,7 @@ export class HelpScene extends Phaser.Scene {
     ];
 
     instructions.forEach(([label, description], index) => {
-      const y = 165 + index * 57;
+      const y = 150 + index * 53;
       this.add
         .text(310, y, label, {
           color: '#fff36b',

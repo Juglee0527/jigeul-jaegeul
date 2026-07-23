@@ -13,7 +13,7 @@ import { EnemySpawner } from '../systems/EnemySpawner';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WaveSystem } from '../systems/WaveSystem';
-import type { GameSession, WaveConfig } from '../types/game';
+import type { GameDifficulty, GameSession, WaveConfig } from '../types/game';
 import { Hud } from '../ui/Hud';
 
 const MAX_EXPERIENCE_GEMS = 180;
@@ -26,6 +26,11 @@ const FIRST_BOSS_TIME_MS = BOSS_DEBUG_ENABLED
   : 3 * 60 * 1000;
 const SECOND_BOSS_TIME_MS = BOSS_DEBUG_ENABLED ? debugBossIntervalMs * 2 : 6 * 60 * 1000;
 const GAME_DURATION_MS = BOSS_DEBUG_ENABLED ? debugBossIntervalMs * 3 : 10 * 60 * 1000;
+const DIFFICULTY_MULTIPLIERS: Readonly<Record<GameDifficulty, number>> = {
+  easy: 0.5,
+  normal: 1,
+  hard: 1.5,
+};
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 
 export class GameScene extends Phaser.Scene {
@@ -44,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private enemySpawner!: EnemySpawner;
   private currentWave!: WaveConfig;
   private session!: GameSession;
+  private difficultyMultiplier = 1;
   private activePlayTimeMs = 0;
   private combatTimeMs = 0;
   private nextAttackAt = 0;
@@ -68,8 +74,10 @@ export class GameScene extends Phaser.Scene {
   init(data?: { session?: GameSession }): void {
     this.session = data?.session ?? {
       mode: 'normal',
+      difficulty: 'normal',
       seed: createRandomSeed(),
     };
+    this.difficultyMultiplier = DIFFICULTY_MULTIPLIERS[this.session.difficulty];
   }
 
   create(): void {
@@ -116,6 +124,7 @@ export class GameScene extends Phaser.Scene {
       this,
       this.enemies,
       new SeededRandom(`${this.session.seed}:enemies`),
+      this.difficultyMultiplier,
     );
     this.currentWave = this.waveSystem.getCurrentWave(0);
     this.hud = new Hud(this);
@@ -618,7 +627,7 @@ export class GameScene extends Phaser.Scene {
       boss.y + Math.sin(angle) * muzzleDistance,
       angle,
       speed,
-      damage,
+      Math.max(1, Math.round(damage * this.difficultyMultiplier)),
     ));
   }
 
@@ -645,7 +654,7 @@ export class GameScene extends Phaser.Scene {
 
   createRestartSession(): GameSession {
     if (this.session.mode === 'normal') {
-      return { mode: 'normal', seed: createRandomSeed() };
+      return { mode: 'normal', difficulty: this.session.difficulty, seed: createRandomSeed() };
     }
     return { ...this.session };
   }

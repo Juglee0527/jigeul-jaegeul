@@ -94,6 +94,7 @@ interface GameResult {
   bossKillCount: number;
   level: number;
   victory?: boolean;
+  difficulty: 'easy' | 'normal' | 'hard';
 }
 
 interface WaveConfig {
@@ -121,6 +122,8 @@ Game Clock → WaveSystem → EnemySpawner
 ```
 
 적 생성 시 시드 난수로 유형별 멘트를 선택한다. `Enemy`는 최대 체력과 현재 체력을 관리하고 피해를 받을 때 부착 체력바의 비율과 색상을 갱신한다. `UpgradeScene`은 현재 `PlayerStats` 복사본을 받아 각 modifier 적용 전·후 값을 계산해 표시한다.
+
+`GameSession`의 난이도를 `EnemySpawner`에 전달해 일반 적과 보스의 체력·속도·접촉 피해에 동일한 배율을 적용한다. 보스 탄환 피해는 `GameScene`에서 같은 배율로 계산한다. 쉬움은 0.5, 보통은 1.0, 어려움은 1.5이며 결과와 재시작 세션에도 난이도를 유지한다.
 
 보스전에서는 생존 타이머와 별개로 계속 증가하는 전투 시계를 사용한다. 자동 공격 쿨다운, 피격 무적시간, 보스 이동, 패턴 예약과 단계별 저속 지원군 생성은 전투 시계를 참조하므로 생존 타이머가 3:00, 6:00 또는 10:00에 정지해도 전투가 멈추지 않는다. `BossProjectile`은 조준·원형 탄막을 공통 처리하며 발사 전 Phaser Tween 경고를 표시한다.
 

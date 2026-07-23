@@ -1,7 +1,9 @@
 export type GameMode = 'normal' | 'daily';
+export type GameDifficulty = 'easy' | 'normal' | 'hard';
 
 export interface GameSession {
   mode: GameMode;
+  difficulty: GameDifficulty;
   seed: string;
   dailyDate?: string;
 }
@@ -13,6 +15,7 @@ export interface GameResult {
   bossKillCount: number;
   victory?: boolean;
   mode: GameMode;
+  difficulty: GameDifficulty;
   seed: string;
   dailyDate?: string;
 }

@@ -33,6 +33,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     message: string,
     hpMultiplier: number,
     speedMultiplier: number,
+    damageMultiplier: number,
   ) {
     super(scene, x, y, `enemy-${definition.id}`);
 
@@ -40,7 +41,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = Math.ceil(definition.maxHp * hpMultiplier);
     this.hp = this.maxHp;
     this.speedMultiplier = speedMultiplier;
-    this.contactDamage = definition.contactDamage;
+    this.contactDamage = Math.max(1, Math.round(definition.contactDamage * damageMultiplier));
     this.experienceValue = definition.experienceValue;
     this.isBoss = definition.isBoss ?? false;
     this.enemyId = definition.id;

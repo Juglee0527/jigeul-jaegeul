@@ -4,13 +4,23 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { createRandomSeed, getLocalDateSeed } from '../services/SeededRandom';
 import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
-import type { GameSession } from '../types/game';
+import type { GameDifficulty, GameSession } from '../types/game';
+
+const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
+  easy: '쉬움 ×0.5',
+  normal: '보통 ×1.0',
+  hard: '어려움 ×1.5',
+};
+
+const DIFFICULTIES: readonly GameDifficulty[] = ['easy', 'normal', 'hard'];
 
 export class MenuScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
   private menuCards: Phaser.GameObjects.Rectangle[] = [];
   private menuActions: Array<() => void> = [];
   private selectedIndex = 0;
+  private selectedDifficulty: GameDifficulty = 'normal';
+  private difficultyButtons: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() {
     super('MenuScene');
@@ -21,6 +31,8 @@ export class MenuScene extends Phaser.Scene {
     this.menuCards = [];
     this.menuActions = [];
     this.selectedIndex = 0;
+    this.selectedDifficulty = 'normal';
+    this.difficultyButtons = [];
     const records = new StorageService().load();
     const today = getLocalDateSeed();
     const todayRecord = records.dailyRecords[today];
@@ -54,10 +66,10 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.createModeCard(700, 98, '일반 생존', '3단계 보스와 매 판 새로운 능력 조합', 'PLAY', true, () => {
-      this.startGame({ mode: 'normal', seed: createRandomSeed() });
+      this.startGame({ mode: 'normal', difficulty: this.selectedDifficulty, seed: createRandomSeed() });
     });
     this.createModeCard(700, 272, '오늘의 도전', `${today} · 똑같은 패턴`, 'DAILY', false, () => {
-      this.startGame({ mode: 'daily', seed: today, dailyDate: today });
+      this.startGame({ mode: 'daily', difficulty: this.selectedDifficulty, seed: today, dailyDate: today });
     }, todayRecord ? `오늘 최고  ${todayRecord.score.toLocaleString('ko-KR')}` : '첫 기록을 남겨보세요');
 
     this.createSmallButton(700, 462, '게임 방법  →', () => {
@@ -65,6 +77,7 @@ export class MenuScene extends Phaser.Scene {
       this.scene.launch('HelpScene');
       this.scene.pause();
     });
+    this.createDifficultySelector();
     this.renderSelection();
 
     this.add.text(68, 386, 'MY RECORD', {
@@ -79,7 +92,7 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
     this.createStat(270, 515, '클리어 목표', '최종 보스 격파');
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '↑ ↓ 메뉴 선택  ·  ENTER 확인  ·  WASD / 방향키 이동', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 26, '↑ ↓ 메뉴 선택  ·  ← → 난이도  ·  ENTER 확인', {
       color: '#6f6578',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
@@ -89,10 +102,14 @@ export class MenuScene extends Phaser.Scene {
     keyboard?.on('keydown-UP', this.selectPrevious, this);
     keyboard?.on('keydown-DOWN', this.selectNext, this);
     keyboard?.on('keydown-ENTER', this.activateSelection, this);
+    keyboard?.on('keydown-LEFT', this.selectPreviousDifficulty, this);
+    keyboard?.on('keydown-RIGHT', this.selectNextDifficulty, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       keyboard?.off('keydown-UP', this.selectPrevious, this);
       keyboard?.off('keydown-DOWN', this.selectNext, this);
       keyboard?.off('keydown-ENTER', this.activateSelection, this);
+      keyboard?.off('keydown-LEFT', this.selectPreviousDifficulty, this);
+      keyboard?.off('keydown-RIGHT', this.selectNextDifficulty, this);
     });
   }
 
@@ -173,6 +190,66 @@ export class MenuScene extends Phaser.Scene {
     button.on('pointerover', () => this.setSelectedIndex(menuIndex));
     button.on('pointerout', () => this.renderSelection());
     button.on('pointerdown', () => this.activateIndex(menuIndex));
+  }
+
+  private createDifficultySelector(): void {
+    this.add.text(700, 544, '난이도 선택', {
+      color: '#8f7ca3',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      letterSpacing: 1,
+    });
+
+    DIFFICULTIES.forEach((difficulty, index) => {
+      const x = 700 + index * 170;
+      const button = this.add.rectangle(x, 572, 158, 54, 0x15101d, 0.98)
+        .setOrigin(0)
+        .setInteractive({ useHandCursor: true });
+      this.difficultyButtons.push(button);
+      this.add.text(x + 79, 599, DIFFICULTY_LABELS[difficulty], {
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '17px',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+      button.on('pointerdown', () => this.setDifficulty(difficulty));
+      button.on('pointerover', () => {
+        if (this.selectedDifficulty !== difficulty) {
+          button.setFillStyle(0x291b35);
+        }
+      });
+      button.on('pointerout', () => this.renderDifficulty());
+    });
+    this.renderDifficulty();
+  }
+
+  private selectPreviousDifficulty(): void {
+    this.audio.play('navigate');
+    const index = DIFFICULTIES.indexOf(this.selectedDifficulty);
+    this.setDifficulty(DIFFICULTIES[Phaser.Math.Wrap(index - 1, 0, DIFFICULTIES.length)]);
+  }
+
+  private selectNextDifficulty(): void {
+    this.audio.play('navigate');
+    const index = DIFFICULTIES.indexOf(this.selectedDifficulty);
+    this.setDifficulty(DIFFICULTIES[Phaser.Math.Wrap(index + 1, 0, DIFFICULTIES.length)]);
+  }
+
+  private setDifficulty(difficulty: GameDifficulty): void {
+    this.selectedDifficulty = difficulty;
+    this.audio.unlock();
+    this.audio.play('confirm');
+    this.renderDifficulty();
+  }
+
+  private renderDifficulty(): void {
+    this.difficultyButtons.forEach((button, index) => {
+      const selected = DIFFICULTIES[index] === this.selectedDifficulty;
+      button.setFillStyle(selected ? 0x4a204f : 0x15101d);
+      button.setStrokeStyle(selected ? 3 : 1, selected ? COLORS.projectile : 0x604579, selected ? 1 : 0.75);
+      button.setScale(selected ? 1.025 : 1);
+    });
   }
 
   private selectPrevious(): void {

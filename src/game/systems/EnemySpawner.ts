@@ -11,6 +11,7 @@ export class EnemySpawner {
     private readonly scene: Phaser.Scene,
     private readonly group: Phaser.Physics.Arcade.Group,
     private readonly random: RandomSource,
+    private readonly difficultyMultiplier: number,
   ) {}
 
   spawn(wave: WaveConfig, spawnLimit = wave.spawnCount): void {
@@ -28,8 +29,9 @@ export class EnemySpawner {
           position.y,
           definition,
           message,
-          wave.enemyHpMultiplier,
-          wave.enemySpeedMultiplier,
+          wave.enemyHpMultiplier * this.difficultyMultiplier,
+          wave.enemySpeedMultiplier * this.difficultyMultiplier,
+          this.difficultyMultiplier,
         ),
       );
     }
@@ -44,8 +46,9 @@ export class EnemySpawner {
       position.y,
       definition,
       this.random.pick(definition.messages),
-      1,
-      1,
+      this.difficultyMultiplier,
+      this.difficultyMultiplier,
+      this.difficultyMultiplier,
     );
     this.group.add(boss);
     return boss;
