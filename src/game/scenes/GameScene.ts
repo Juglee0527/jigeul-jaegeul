@@ -325,7 +325,6 @@ export class GameScene extends Phaser.Scene {
     this.upgradeSystem.apply(id, this.player);
     this.audio.play('confirm');
     this.audio.setMood('game');
-    this.hud.showDetailedStats();
     this.choosingUpgrade = false;
     if (this.endAfterUpgrade) {
       this.endAfterUpgrade = false;
