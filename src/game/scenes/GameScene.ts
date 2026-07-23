@@ -16,6 +16,7 @@ import type { GameSession, WaveConfig } from '../types/game';
 import { Hud } from '../ui/Hud';
 
 const MAX_EXPERIENCE_GEMS = 180;
+const GAME_DURATION_MS = 10 * 60 * 1000;
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 
 export class GameScene extends Phaser.Scene {
@@ -24,6 +25,7 @@ export class GameScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private projectiles!: Phaser.Physics.Arcade.Group;
   private experienceGems!: Phaser.Physics.Arcade.Group;
+  private treasureChests!: Phaser.Physics.Arcade.Group;
   private hud!: Hud;
   private levelSystem!: LevelSystem;
   private upgradeSystem!: UpgradeSystem;
@@ -37,6 +39,10 @@ export class GameScene extends Phaser.Scene {
   private nextSpawnAt = 0;
   private gameEnded = false;
   private choosingUpgrade = false;
+  private fiveMinuteBossSpawned = false;
+  private finalBossSpawned = false;
+  private activeBoss?: Enemy;
+  private endAfterUpgrade = false;
 
   constructor() {
     super('GameScene');
@@ -54,6 +60,10 @@ export class GameScene extends Phaser.Scene {
     this.physics.resume();
     this.gameEnded = false;
     this.choosingUpgrade = false;
+    this.fiveMinuteBossSpawned = false;
+    this.finalBossSpawned = false;
+    this.activeBoss = undefined;
+    this.endAfterUpgrade = false;
     this.activePlayTimeMs = 0;
     this.nextAttackAt = 0;
     this.nextSpawnAt = 0;
@@ -68,6 +78,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.projectiles = this.physics.add.group();
     this.experienceGems = this.physics.add.group();
+    this.treasureChests = this.physics.add.group();
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.levelSystem = new LevelSystem();
     this.upgradeSystem = new UpgradeSystem(
@@ -98,6 +109,13 @@ export class GameScene extends Phaser.Scene {
       undefined,
       this,
     );
+    this.physics.add.overlap(
+      this.player,
+      this.treasureChests,
+      this.handleTreasurePickup,
+      undefined,
+      this,
+    );
 
     const keyboard = this.input.keyboard;
     keyboard?.on('keydown-ESC', this.pauseGame, this);
@@ -114,12 +132,24 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.activePlayTimeMs += delta;
+    if (!this.activeBoss?.active) {
+      this.activePlayTimeMs = Math.min(GAME_DURATION_MS, this.activePlayTimeMs + delta);
+    }
     this.player.update(delta);
     const survivalSeconds = this.activePlayTimeMs / 1000;
     this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
 
-    if (this.activePlayTimeMs >= this.nextSpawnAt) {
+    if (!this.fiveMinuteBossSpawned && this.activePlayTimeMs >= 300_000) {
+      this.fiveMinuteBossSpawned = true;
+      this.activePlayTimeMs = 300_000;
+      this.spawnBoss('middle-manager', '5분 보스 등장!');
+    }
+    if (!this.finalBossSpawned && this.activePlayTimeMs >= GAME_DURATION_MS) {
+      this.finalBossSpawned = true;
+      this.spawnBoss('final-boss', '최종 보스 등장!');
+    }
+
+    if (!this.activeBoss?.active && this.activePlayTimeMs >= this.nextSpawnAt && !this.finalBossSpawned) {
       this.enemySpawner.spawn(this.currentWave);
       this.nextSpawnAt = this.activePlayTimeMs + this.currentWave.spawnInterval;
     }
@@ -243,6 +273,12 @@ export class GameScene extends Phaser.Scene {
     if (enemy.takeDamage(damage)) {
       this.audio.play('kill');
       this.scoreSystem.registerKill();
+      if (enemy.isBoss) {
+        this.scoreSystem.registerBossKill();
+        this.activeBoss = undefined;
+        this.dropTreasure(dropX, dropY, enemy.enemyId === 'final-boss');
+        return;
+      }
       this.showKillEffect(dropX, dropY, enemy.experienceValue);
       if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
         this.experienceGems.add(
@@ -291,6 +327,10 @@ export class GameScene extends Phaser.Scene {
     this.audio.setMood('game');
     this.hud.showDetailedStats();
     this.choosingUpgrade = false;
+    if (this.endAfterUpgrade) {
+      this.endAfterUpgrade = false;
+      this.endGame(600, true);
+    }
   }
 
   getPlayerStats(): Readonly<Player['stats']> {
@@ -310,6 +350,71 @@ export class GameScene extends Phaser.Scene {
     const levels = Object.fromEntries(choices.map((choice) => [choice.id, this.upgradeSystem.getLevel(choice.id)]));
     this.scene.launch('UpgradeScene', { choices, levels, stats: { ...this.player.stats } });
     this.scene.pause();
+  }
+
+  private handleTreasurePickup(
+    _playerObject: ArcadeCollisionObject,
+    chestObject: ArcadeCollisionObject,
+  ): void {
+    const chest = chestObject as Phaser.Physics.Arcade.Sprite;
+    if (!chest.active || this.choosingUpgrade) {
+      return;
+    }
+    const isFinal = chest.getData('final') === true;
+    chest.destroy();
+    const choices = this.upgradeSystem.getLegendaryChoices();
+    if (choices.length === 0) {
+      if (isFinal) {
+        this.endGame(600, true);
+      }
+      return;
+    }
+    this.endAfterUpgrade = isFinal;
+    this.openUpgradeChoices(choices);
+  }
+
+  private openUpgradeChoices(choices: ReturnType<UpgradeSystem['getLegendaryChoices']>): void {
+    this.choosingUpgrade = true;
+    this.audio.play('levelUp');
+    this.audio.setMood('paused');
+    this.cameras.main.flash(300, 255, 196, 61, false);
+    const levels = Object.fromEntries(choices.map((choice) => [choice.id, this.upgradeSystem.getLevel(choice.id)]));
+    this.scene.launch('UpgradeScene', { choices, levels, stats: { ...this.player.stats } });
+    this.scene.pause();
+  }
+
+  private spawnBoss(enemyId: string, announcement: string): void {
+    this.activeBoss = this.enemySpawner.spawnBoss(enemyId);
+    this.audio.play('boss');
+    this.cameras.main.shake(500, 0.012);
+    const text = this.add.text(GAME_WIDTH / 2, 180, announcement, {
+      color: '#ffc43d',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '48px',
+      fontStyle: 'bold',
+      stroke: '#2a0c10',
+      strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(60);
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      y: 140,
+      duration: 1800,
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  private dropTreasure(x: number, y: number, isFinal: boolean): void {
+    const chest = this.physics.add.sprite(x, y, 'treasure').setDepth(18).setData('final', isFinal);
+    this.treasureChests.add(chest);
+    this.tweens.add({
+      targets: chest,
+      scale: { from: 0.6, to: 1.15 },
+      angle: { from: -8, to: 8 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   createRestartSession(): GameSession {
@@ -377,7 +482,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private endGame(survivalSeconds: number): void {
+  private endGame(survivalSeconds: number, victory = false): void {
     if (this.gameEnded) {
       return;
     }
@@ -390,7 +495,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(350, () => {
       this.scene.start(
         'ResultScene',
-        this.scoreSystem.createResult(survivalSeconds, this.levelSystem.level),
+        this.scoreSystem.createResult(survivalSeconds, this.levelSystem.level, victory),
       );
     });
   }

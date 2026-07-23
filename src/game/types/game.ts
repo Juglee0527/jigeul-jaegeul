@@ -11,6 +11,7 @@ export interface GameResult {
   killCount: number;
   level: number;
   bossKillCount: number;
+  victory?: boolean;
   mode: GameMode;
   seed: string;
   dailyDate?: string;
@@ -83,6 +84,7 @@ export interface EnemyDefinition {
   moveSpeed: number;
   contactDamage: number;
   experienceValue: number;
+  isBoss?: boolean;
   chargeSpeed?: number;
   chargeTriggerDistance?: number;
   chargeDuration?: number;

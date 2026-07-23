@@ -11,6 +11,7 @@ export function calculateFinalScore(result: GameResult): number {
 
 export class ScoreSystem {
   killCount = 0;
+  bossKillCount = 0;
 
   constructor(private readonly session: GameSession) {}
 
@@ -18,16 +19,21 @@ export class ScoreSystem {
     this.killCount += 1;
   }
 
+  registerBossKill(): void {
+    this.bossKillCount += 1;
+  }
+
   getCurrentScore(survivalSeconds: number, level: number): number {
     return calculateFinalScore(this.createResult(survivalSeconds, level));
   }
 
-  createResult(survivalSeconds: number, level: number): GameResult {
+  createResult(survivalSeconds: number, level: number, victory = false): GameResult {
     return {
       survivalSeconds,
       killCount: this.killCount,
       level,
-      bossKillCount: 0,
+      bossKillCount: this.bossKillCount,
+      victory,
       ...this.session,
     };
   }

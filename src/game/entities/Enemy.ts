@@ -5,6 +5,8 @@ import type { EnemyDefinition } from '../types/game';
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly contactDamage: number;
   readonly experienceValue: number;
+  readonly isBoss: boolean;
+  readonly enemyId: string;
 
   private readonly definition: EnemyDefinition;
   private readonly speedMultiplier: number;
@@ -35,6 +37,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.speedMultiplier = speedMultiplier;
     this.contactDamage = definition.contactDamage;
     this.experienceValue = definition.experienceValue;
+    this.isBoss = definition.isBoss ?? false;
+    this.enemyId = definition.id;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);

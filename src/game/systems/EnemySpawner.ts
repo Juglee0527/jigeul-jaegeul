@@ -35,6 +35,22 @@ export class EnemySpawner {
     }
   }
 
+  spawnBoss(enemyId: string): Enemy {
+    const definition = getEnemyDefinition(enemyId);
+    const position = this.getSpawnPosition(definition.radius);
+    const boss = new Enemy(
+      this.scene,
+      position.x,
+      position.y,
+      definition,
+      this.random.pick(definition.messages),
+      1,
+      1,
+    );
+    this.group.add(boss);
+    return boss;
+  }
+
   private weightedPick(weights: readonly EnemyWeight[]): string {
     const totalWeight = weights.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = this.random.next() * totalWeight;

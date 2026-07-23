@@ -8,6 +8,7 @@ export type SoundEffect =
   | 'hurt'
   | 'pickup'
   | 'levelUp'
+  | 'boss'
   | 'pause'
   | 'gameOver';
 
@@ -104,6 +105,10 @@ export class AudioManager {
         [523, 659, 784, 1047].forEach((frequency, index) => {
           this.tone(frequency, now + index * 0.07, 0.18, 0.085, 'triangle', this.sfxGain!);
         });
+        break;
+      case 'boss':
+        this.sweep(110, 55, now, 0.6, 0.28, 'sawtooth');
+        this.tone(82, now + 0.18, 0.7, 0.22, 'square', this.sfxGain);
         break;
       case 'pause':
         this.sweep(440, 220, now, 0.16, 0.07, 'triangle');

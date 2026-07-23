@@ -14,6 +14,7 @@ export class BootScene extends Phaser.Scene {
     this.createWeaponTexture();
     this.createProjectileTexture();
     this.createExperienceTexture();
+    this.createTreasureTexture();
     ENEMY_DEFINITIONS.forEach((enemy) => this.createEnemyTexture(enemy));
     this.scene.start('MenuScene');
   }
@@ -84,6 +85,20 @@ export class BootScene extends Phaser.Scene {
     g.strokeTriangle(12, 2, 21, 12, 12, 22);
     g.strokeTriangle(12, 2, 3, 12, 12, 22);
     g.generateTexture('experience', 24, 24);
+    g.destroy();
+  }
+
+  private createTreasureTexture(): void {
+    const g = this.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x6b3514);
+    g.fillRoundedRect(4, 18, 56, 38, 7);
+    g.fillStyle(0xffc43d);
+    g.fillRoundedRect(4, 13, 56, 18, 8);
+    g.lineStyle(4, 0xffef9a);
+    g.strokeRoundedRect(4, 13, 56, 43, 8);
+    g.fillStyle(0xffef9a);
+    g.fillRect(27, 28, 10, 20);
+    g.generateTexture('treasure', 64, 64);
     g.destroy();
   }
 

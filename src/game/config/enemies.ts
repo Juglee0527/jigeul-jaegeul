@@ -65,6 +65,32 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     contactDamage: 20,
     experienceValue: 7,
   },
+  {
+    id: 'middle-manager',
+    name: '중간 보스',
+    messages: ['중간점검', '보고서내놔', '다시해와', '회의잡자'],
+    archetype: 'tank',
+    color: 0xffb13b,
+    radius: 48,
+    maxHp: 2_400,
+    moveSpeed: 48,
+    contactDamage: 28,
+    experienceValue: 40,
+    isBoss: true,
+  },
+  {
+    id: 'final-boss',
+    name: '최종 보스',
+    messages: ['오늘배포', '전부수정', '퇴근금지', '최종의최종'],
+    archetype: 'tank',
+    color: 0xff304f,
+    radius: 58,
+    maxHp: 6_000,
+    moveSpeed: 55,
+    contactDamage: 36,
+    experienceValue: 100,
+    isBoss: true,
+  },
 ] as const;
 
 export function getEnemyDefinition(id: string): EnemyDefinition {

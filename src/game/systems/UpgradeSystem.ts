@@ -70,6 +70,20 @@ export class UpgradeSystem {
     return this.levels.get(id) ?? 0;
   }
 
+  getLegendaryChoices(count = 3): UpgradeDefinition[] {
+    const pool = UPGRADES.filter((upgrade) => (
+      upgrade.rarity === 'legendary'
+      && this.getLevel(upgrade.id) < upgrade.maxLevel
+    ));
+    const choices: UpgradeDefinition[] = [];
+    while (choices.length < count && pool.length > 0) {
+      const selected = this.weightedPick(pool);
+      choices.push(selected);
+      pool.splice(pool.indexOf(selected), 1);
+    }
+    return choices;
+  }
+
   apply(id: string, player: Player): void {
     const upgrade = UPGRADES.find((candidate) => candidate.id === id);
     if (!upgrade) {

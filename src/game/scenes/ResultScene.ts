@@ -40,8 +40,8 @@ export class ResultScene extends Phaser.Scene {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
 
     this.add
-      .text(GAME_WIDTH / 2, 72, '긁혔습니다.', {
-        color: '#ff5c72',
+      .text(GAME_WIDTH / 2, 72, this.result.victory ? '10분 생존 성공!' : '긁혔습니다.', {
+        color: this.result.victory ? '#ffc43d' : '#ff5c72',
         fontFamily: 'system-ui, sans-serif',
         fontSize: '68px',
         fontStyle: 'bold',
@@ -66,7 +66,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         275,
-        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n도달 레벨   ${this.result.level}`,
+        `생존 시간  ${this.formatTime(this.result.survivalSeconds)}\n처치 수     ${this.result.killCount}\n보스 처치   ${this.result.bossKillCount}\n도달 레벨   ${this.result.level}`,
         {
           align: 'center',
           color: '#ffffff',
