@@ -35,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   private currentWave!: WaveConfig;
   private session!: GameSession;
   private activePlayTimeMs = 0;
+  private combatTimeMs = 0;
   private nextAttackAt = 0;
   private nextSpawnAt = 0;
   private gameEnded = false;
@@ -65,6 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.activeBoss = undefined;
     this.endAfterUpgrade = false;
     this.activePlayTimeMs = 0;
+    this.combatTimeMs = 0;
     this.nextAttackAt = 0;
     this.nextSpawnAt = 0;
 
@@ -132,6 +134,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // 생존 타이머는 보스전 중 멈추지만 공격 쿨다운, 피격 무적시간,
+    // 적 행동에는 계속 흐르는 별도의 전투 시계를 사용한다.
+    this.combatTimeMs += delta;
     if (!this.activeBoss?.active) {
       this.activePlayTimeMs = Math.min(GAME_DURATION_MS, this.activePlayTimeMs + delta);
     }
@@ -158,7 +163,7 @@ export class GameScene extends Phaser.Scene {
       const enemy = gameObject as Enemy;
       if (enemy.active) {
         enemy.updateBehavior(
-          this.activePlayTimeMs,
+          this.combatTimeMs,
           this.player,
           this.player.stats.enemySpeedMultiplier,
         );
@@ -175,8 +180,8 @@ export class GameScene extends Phaser.Scene {
       projectile.updateTravel(delta);
     });
 
-    if (this.activePlayTimeMs >= this.nextAttackAt && this.autoAttack()) {
-      this.nextAttackAt = this.activePlayTimeMs + this.player.stats.attackCooldown;
+    if (this.combatTimeMs >= this.nextAttackAt && this.autoAttack()) {
+      this.nextAttackAt = this.combatTimeMs + this.player.stats.attackCooldown;
     }
 
     this.hud.update(
@@ -311,7 +316,7 @@ export class GameScene extends Phaser.Scene {
     enemyObject: ArcadeCollisionObject,
   ): void {
     const enemy = enemyObject as Enemy;
-    if (this.player.takeDamage(enemy.contactDamage, this.activePlayTimeMs)) {
+    if (this.player.takeDamage(enemy.contactDamage, this.combatTimeMs)) {
       this.audio.play('hurt');
       this.cameras.main.shake(90, 0.006);
       this.cameras.main.flash(80, 255, 38, 70, false);
@@ -383,6 +388,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnBoss(enemyId: string, announcement: string): void {
+    this.enemies.getChildren().forEach((gameObject) => {
+      const enemy = gameObject as Enemy;
+      if (enemy.active && !enemy.isBoss) {
+        enemy.destroy();
+      }
+    });
+    this.projectiles.clear(true, true);
     this.activeBoss = this.enemySpawner.spawnBoss(enemyId);
     this.audio.play('boss');
     this.cameras.main.shake(500, 0.012);
