@@ -13,6 +13,7 @@ export class BootScene extends Phaser.Scene {
     this.createPlayerTexture();
     this.createWeaponTexture();
     this.createProjectileTexture();
+    this.createBossProjectileTexture();
     this.createExperienceTexture();
     this.createTreasureTexture();
     ENEMY_DEFINITIONS.forEach((enemy) => this.createEnemyTexture(enemy));
@@ -71,6 +72,20 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffffff);
     g.fillRoundedRect(34, 7, 15, 4, 2);
     g.generateTexture('projectile', 52, 18);
+    g.destroy();
+  }
+
+  private createBossProjectileTexture(): void {
+    const g = this.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0xff304f, 0.18);
+    g.fillCircle(12, 12, 12);
+    g.fillStyle(0xff5c72);
+    g.fillCircle(12, 12, 8);
+    g.lineStyle(2, 0xffef9a, 1);
+    g.strokeCircle(12, 12, 8);
+    g.fillStyle(0xffffff);
+    g.fillCircle(9, 9, 3);
+    g.generateTexture('boss-projectile', 24, 24);
     g.destroy();
   }
 

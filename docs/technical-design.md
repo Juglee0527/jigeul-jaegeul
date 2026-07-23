@@ -32,6 +32,7 @@ src/
 │  ├─ entities/
 │  │  ├─ Player.ts
 │  │  ├─ Enemy.ts
+│  │  ├─ BossProjectile.ts
 │  │  ├─ Projectile.ts
 │  │  └─ ExperienceGem.ts
 │  ├─ systems/
@@ -113,13 +114,15 @@ interface WaveConfig {
 입력 → Player 이동
 Game Clock → WaveSystem → EnemySpawner
 자동 공격 타이머 → 전역 최근접 대상 탐색 → Player 부착 총기 회전·반동 → 매 프레임 직접 이동하는 방향성 Projectile 일제 사격
-충돌 → 피해 → 적 사망 → 경험치/처치/점수
+충돌 → 피해 → 적 사망 → 글자 단계별 경험치/처치/점수
 경험치 획득 → LevelSystem → UpgradeScene
 5분/10분 도달 → 보스 생성 → 타이머 정지 → 보스 처치 → 전설 보물상자 → UpgradeScene
 플레이어 사망 또는 최종 보스 승리 → GameResult → 점수 계산 → StorageService → ResultScene
 ```
 
 적 생성 시 시드 난수로 유형별 멘트를 선택한다. `Enemy`는 최대 체력과 현재 체력을 관리하고 피해를 받을 때 부착 체력바의 비율과 색상을 갱신한다. `UpgradeScene`은 현재 `PlayerStats` 복사본을 받아 각 modifier 적용 전·후 값을 계산해 표시한다.
+
+보스전에서는 생존 타이머와 별개로 계속 증가하는 전투 시계를 사용한다. 자동 공격 쿨다운, 피격 무적시간, 보스 이동과 패턴 예약은 전투 시계를 참조하므로 생존 타이머가 5:00 또는 10:00에 정지해도 전투가 멈추지 않는다. `BossProjectile`은 조준·원형 탄막을 공통 처리하며 발사 전 Phaser Tween 경고를 표시한다.
 
 `Hud`는 공격력·공격속도·공격거리·탄환 수만 상시 표시한다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 표시하고 위·아래 방향키와 Enter로 메뉴를 조작한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
 

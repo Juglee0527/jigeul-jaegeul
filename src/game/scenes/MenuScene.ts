@@ -56,7 +56,7 @@ export class MenuScene extends Phaser.Scene {
     this.createModeCard(700, 98, '일반 생존', '매 판 새로운 적과 능력 조합', 'PLAY', true, () => {
       this.startGame({ mode: 'normal', seed: createRandomSeed() });
     });
-    this.createModeCard(700, 272, '오늘의 도전', `${today} · 모두 같은 운명`, 'DAILY', false, () => {
+    this.createModeCard(700, 272, '오늘의 도전', `${today} · 똑같은 패턴`, 'DAILY', false, () => {
       this.startGame({ mode: 'daily', seed: today, dailyDate: today });
     }, todayRecord ? `오늘 최고  ${todayRecord.score.toLocaleString('ko-KR')}` : '첫 기록을 남겨보세요');
 

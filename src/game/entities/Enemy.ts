@@ -20,6 +20,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private nextChargeAt = 0;
   private charging = false;
 
+  get healthRatio(): number {
+    return this.hp / this.maxHp;
+  }
+
   constructor(
     scene: Phaser.Scene,
     x: number,
