@@ -19,6 +19,7 @@ src/
 ├─ main.ts
 ├─ game/
 │  ├─ config/
+│  │  ├─ constants.ts
 │  │  ├─ gameConfig.ts
 │  │  ├─ enemies.ts
 │  │  ├─ upgrades.ts
@@ -26,8 +27,10 @@ src/
 │  ├─ scenes/
 │  │  ├─ BootScene.ts
 │  │  ├─ MenuScene.ts
+│  │  ├─ HelpScene.ts
 │  │  ├─ GameScene.ts
 │  │  ├─ UpgradeScene.ts
+│  │  ├─ PauseScene.ts
 │  │  └─ ResultScene.ts
 │  ├─ entities/
 │  │  ├─ Player.ts
@@ -37,17 +40,17 @@ src/
 │  │  └─ ExperienceGem.ts
 │  ├─ systems/
 │  │  ├─ EnemySpawner.ts
-│  │  ├─ CombatSystem.ts
 │  │  ├─ LevelSystem.ts
 │  │  ├─ UpgradeSystem.ts
 │  │  ├─ ScoreSystem.ts
 │  │  └─ WaveSystem.ts
 │  ├─ services/
+│  │  ├─ AudioManager.ts
 │  │  ├─ SeededRandom.ts
 │  │  └─ StorageService.ts
 │  ├─ ui/
 │  │  ├─ Hud.ts
-│  │  └─ UpgradeCard.ts
+│  │  └─ statFormatting.ts
 │  └─ types/
 │     └─ game.ts
 └─ styles/
@@ -74,7 +77,6 @@ src/
 ```ts
 interface PlayerStats {
   maxHp: number;
-  hp: number;
   moveSpeed: number;
   attackDamage: number;
   attackCooldown: number;
@@ -84,8 +86,14 @@ interface PlayerStats {
   pickupRange: number;
   armor: number;
   regeneration: number;
-  criticalChance: number;
-  criticalDamage: number;
+  enemySpeedMultiplier: number;
+}
+
+interface GameSession {
+  mode: 'normal' | 'daily';
+  difficulty: 'easy' | 'normal' | 'hard';
+  seed: string;
+  dailyDate?: string;
 }
 
 interface GameResult {
@@ -95,15 +103,21 @@ interface GameResult {
   level: number;
   victory?: boolean;
   difficulty: 'easy' | 'normal' | 'hard';
+  mode: 'normal' | 'daily';
+  seed: string;
+  dailyDate?: string;
 }
 
 interface WaveConfig {
+  id: string;
+  name: string;
   startTime: number;
   spawnInterval: number;
+  spawnCount: number;
   maxEnemies: number;
   enemyHpMultiplier: number;
   enemySpeedMultiplier: number;
-  availableEnemyTypes: string[];
+  enemies: readonly EnemyWeight[];
 }
 ```
 
@@ -127,9 +141,9 @@ Game Clock → WaveSystem → EnemySpawner
 
 보스전에서는 생존 타이머와 별개로 계속 증가하는 전투 시계를 사용한다. 자동 공격 쿨다운, 피격 무적시간, 보스 이동, 패턴 예약과 단계별 저속 지원군 생성은 전투 시계를 참조하므로 생존 타이머가 3:00, 6:00 또는 10:00에 정지해도 전투가 멈추지 않는다. `BossProjectile`은 조준·원형 탄막을 공통 처리하며 발사 전 Phaser Tween 경고를 표시한다.
 
-`Hud`는 공격력·공격속도·공격거리·탄환 수만 상시 표시한다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 표시하고 위·아래 방향키와 Enter로 메뉴를 조작한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
+`Hud`는 공격력·공격속도·공격거리·탄환 수와 현재 난이도 배지를 상시 표시한다. 난이도 색상은 쉬움 초록, 보통 노랑, 어려움 빨강으로 통일한다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 표시하고 위·아래 방향키와 Enter로 메뉴를 조작한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
 
-메인 메뉴는 위·아래 방향키로 포커스를 순환하고 Enter로 선택한다. 체력이 0이 된 플레이어에게는 재생을 적용하지 않으며, 접촉 피해 콜백에서 즉시 게임 종료를 확정해 다음 프레임 재생으로 되살아나는 경로를 차단한다. HUD 경험치는 `현재 / 필요 (정수%)` 형식으로 표시한다.
+메인 메뉴는 위·아래 방향키로 포커스를 순환하고 Enter로 선택하며, 좌·우 방향키로 난이도를 변경한다. 체력이 0이 된 플레이어에게는 재생을 적용하지 않으며, 접촉 피해 콜백에서 즉시 게임 종료를 확정해 다음 프레임 재생으로 되살아나는 경로를 차단한다. HUD 경험치는 `현재 / 필요 (정수%)` 형식으로 표시한다.
 
 `AudioManager`는 최초 사용자 입력에서 Web Audio 그래프를 활성화한다. 짧은 look-ahead 스케줄러로 절차형 BGM을 생성하고 Scene 상태별 템포·음량을 전환한다. 효과음은 오실레이터의 주파수·파형·엔벌로프 조합으로 생성해 별도 음원 파일과 저작권 의존성을 만들지 않는다.
 
