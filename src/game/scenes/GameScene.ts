@@ -56,6 +56,7 @@ export class GameScene extends Phaser.Scene {
   private activeBoss?: Enemy;
   private nextBossAimedAt = 0;
   private nextBossBurstAt = 0;
+  private nextBossReinforcementAt = 0;
   private bossBurstRotation = 0;
   private bossEnraged = false;
   private endAfterUpgrade = false;
@@ -82,6 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.activeBoss = undefined;
     this.nextBossAimedAt = 0;
     this.nextBossBurstAt = 0;
+    this.nextBossReinforcementAt = 0;
     this.bossBurstRotation = 0;
     this.bossEnraged = false;
     this.endAfterUpgrade = false;
@@ -195,6 +197,11 @@ export class GameScene extends Phaser.Scene {
     if (!this.activeBoss?.active && this.activePlayTimeMs >= this.nextSpawnAt && !this.finalBossSpawned) {
       this.enemySpawner.spawn(this.currentWave);
       this.nextSpawnAt = this.activePlayTimeMs + this.currentWave.spawnInterval;
+    }
+    if (this.activeBoss?.active && this.combatTimeMs >= this.nextBossReinforcementAt) {
+      const bossStage = this.getBossStage(this.activeBoss);
+      this.enemySpawner.spawn(this.currentWave, bossStage === 3 ? 2 : 1);
+      this.nextBossReinforcementAt = this.combatTimeMs + this.getBossReinforcementInterval(bossStage);
     }
 
     this.enemies.getChildren().forEach((gameObject) => {
@@ -466,6 +473,8 @@ export class GameScene extends Phaser.Scene {
     this.activeBoss = this.enemySpawner.spawnBoss(enemyId);
     this.nextBossAimedAt = this.combatTimeMs + 1_500;
     this.nextBossBurstAt = this.combatTimeMs + 4_000;
+    this.nextBossReinforcementAt = this.combatTimeMs
+      + this.getBossReinforcementInterval(this.getBossStage(this.activeBoss));
     this.bossBurstRotation = 0;
     this.bossEnraged = false;
     this.audio.play('boss');
@@ -493,7 +502,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const bossStage = boss.enemyId === 'final-boss' ? 3 : boss.enemyId === 'senior-manager' ? 2 : 1;
+    const bossStage = this.getBossStage(boss);
     const enraged = boss.healthRatio <= 0.5;
     if (enraged && !this.bossEnraged) {
       this.bossEnraged = true;
@@ -593,7 +602,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private fireBossRadialBurst(boss: Enemy, count: number): void {
-    const bossStage = boss.enemyId === 'final-boss' ? 3 : boss.enemyId === 'senior-manager' ? 2 : 1;
+    const bossStage = this.getBossStage(boss);
     this.bossBurstRotation += bossStage === 3 ? Math.PI / count : Math.PI / (count * 2);
     for (let index = 0; index < count; index += 1) {
       const angle = this.bossBurstRotation + (Math.PI * 2 * index) / count;
@@ -611,6 +620,14 @@ export class GameScene extends Phaser.Scene {
       speed,
       damage,
     ));
+  }
+
+  private getBossStage(boss: Enemy): number {
+    return boss.enemyId === 'final-boss' ? 3 : boss.enemyId === 'senior-manager' ? 2 : 1;
+  }
+
+  private getBossReinforcementInterval(bossStage: number): number {
+    return bossStage === 3 ? 3_500 : bossStage === 2 ? 4_500 : 5_500;
   }
 
   private dropTreasure(x: number, y: number, isFinal: boolean): void {

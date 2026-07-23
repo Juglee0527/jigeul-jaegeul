@@ -13,9 +13,9 @@ export class EnemySpawner {
     private readonly random: RandomSource,
   ) {}
 
-  spawn(wave: WaveConfig): void {
+  spawn(wave: WaveConfig, spawnLimit = wave.spawnCount): void {
     const availableSlots = wave.maxEnemies - this.group.countActive(true);
-    const spawnCount = Math.min(wave.spawnCount, Math.max(0, availableSlots));
+    const spawnCount = Math.min(spawnLimit, Math.max(0, availableSlots));
 
     for (let index = 0; index < spawnCount; index += 1) {
       const definition = getEnemyDefinition(this.weightedPick(wave.enemies));

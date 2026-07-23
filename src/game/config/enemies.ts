@@ -84,7 +84,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     archetype: 'tank',
     color: 0xffb13b,
     radius: 48,
-    maxHp: 2_400,
+    maxHp: 1_200,
     moveSpeed: 48,
     contactDamage: 28,
     experienceValue: 40,
