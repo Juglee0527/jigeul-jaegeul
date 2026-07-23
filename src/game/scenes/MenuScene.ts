@@ -7,12 +7,17 @@ import { StorageService } from '../services/StorageService';
 import type { GameDifficulty, GameSession } from '../types/game';
 
 const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
-  easy: '쉬움 ×0.5',
-  normal: '보통 ×1.0',
-  hard: '어려움 ×1.5',
+  easy: '쉬움',
+  normal: '보통',
+  hard: '어려움',
 };
 
 const DIFFICULTIES: readonly GameDifficulty[] = ['easy', 'normal', 'hard'];
+const DIFFICULTY_COLORS: Readonly<Record<GameDifficulty, { dim: string; bright: string; stroke: number }>> = {
+  easy: { dim: '#74c991', bright: '#6dff8b', stroke: 0x6dff8b },
+  normal: { dim: '#d6c76e', bright: '#fff36b', stroke: 0xfff36b },
+  hard: { dim: '#d96a77', bright: '#ff334f', stroke: 0xff334f },
+};
 
 export class MenuScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
@@ -21,6 +26,7 @@ export class MenuScene extends Phaser.Scene {
   private selectedIndex = 0;
   private selectedDifficulty: GameDifficulty = 'normal';
   private difficultyButtons: Phaser.GameObjects.Rectangle[] = [];
+  private difficultyTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('MenuScene');
@@ -33,6 +39,7 @@ export class MenuScene extends Phaser.Scene {
     this.selectedIndex = 0;
     this.selectedDifficulty = 'normal';
     this.difficultyButtons = [];
+    this.difficultyTexts = [];
     const records = new StorageService().load();
     const today = getLocalDateSeed();
     const todayRecord = records.dailyRecords[today];
@@ -207,12 +214,13 @@ export class MenuScene extends Phaser.Scene {
         .setOrigin(0)
         .setInteractive({ useHandCursor: true });
       this.difficultyButtons.push(button);
-      this.add.text(x + 79, 599, DIFFICULTY_LABELS[difficulty], {
-        color: '#ffffff',
+      const label = this.add.text(x + 79, 599, DIFFICULTY_LABELS[difficulty], {
+        color: DIFFICULTY_COLORS[difficulty].dim,
         fontFamily: 'system-ui, sans-serif',
         fontSize: '17px',
         fontStyle: 'bold',
       }).setOrigin(0.5);
+      this.difficultyTexts.push(label);
       button.on('pointerdown', () => this.setDifficulty(difficulty));
       button.on('pointerover', () => {
         if (this.selectedDifficulty !== difficulty) {
@@ -246,9 +254,16 @@ export class MenuScene extends Phaser.Scene {
   private renderDifficulty(): void {
     this.difficultyButtons.forEach((button, index) => {
       const selected = DIFFICULTIES[index] === this.selectedDifficulty;
+      const difficulty = DIFFICULTIES[index];
+      const colors = DIFFICULTY_COLORS[difficulty];
       button.setFillStyle(selected ? 0x4a204f : 0x15101d);
-      button.setStrokeStyle(selected ? 3 : 1, selected ? COLORS.projectile : 0x604579, selected ? 1 : 0.75);
+      button.setStrokeStyle(selected ? 3 : 1, selected ? colors.stroke : 0x604579, selected ? 1 : 0.75);
       button.setScale(selected ? 1.025 : 1);
+      this.difficultyTexts[index]?.setColor(selected ? colors.bright : colors.dim);
+      this.difficultyTexts[index]?.setStroke(
+        selected && difficulty === 'hard' ? '#5c0715' : '#000000',
+        selected && difficulty === 'hard' ? 4 : 0,
+      );
     });
   }
 

@@ -127,7 +127,7 @@ export class GameScene extends Phaser.Scene {
       this.difficultyMultiplier,
     );
     this.currentWave = this.waveSystem.getCurrentWave(0);
-    this.hud = new Hud(this);
+    this.hud = new Hud(this, this.session.difficulty);
 
     this.physics.add.overlap(
       this.projectiles,

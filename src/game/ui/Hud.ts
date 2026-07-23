@@ -1,10 +1,15 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
-import type { PlayerStats } from '../types/game';
+import type { GameDifficulty, PlayerStats } from '../types/game';
 import { getCompactStatLines } from './statFormatting';
 
 const HUD_DEPTH = 50;
+const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
+  easy: '쉬움',
+  normal: '보통',
+  hard: '어려움',
+};
 
 export class Hud {
   private readonly hpBar: Phaser.GameObjects.Rectangle;
@@ -19,7 +24,7 @@ export class Hud {
   private readonly statsText: Phaser.GameObjects.Text;
   private currentStats?: PlayerStats;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, difficulty: GameDifficulty) {
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       color: '#a99eb8', fontFamily: 'system-ui, sans-serif', fontSize: '14px', fontStyle: 'bold',
     };
@@ -68,6 +73,14 @@ export class Hud {
     }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
     scene.add.text(28, GAME_HEIGHT - 24, 'WASD / 방향키 이동', {
       color: '#746a80', fontFamily: 'system-ui, sans-serif', fontSize: '14px',
+    }).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
+    scene.add.text(230, GAME_HEIGHT - 24, `난이도  ${DIFFICULTY_LABELS[difficulty]}`, {
+      color: difficulty === 'easy' ? '#6dff8b' : difficulty === 'hard' ? '#ff6f91' : '#fff36b',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      backgroundColor: '#171022',
+      padding: { x: 9, y: 4 },
     }).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
     scene.add.text(GAME_WIDTH - 28, GAME_HEIGHT - 24, 'ESC 일시정지', {
       color: '#746a80', fontFamily: 'system-ui, sans-serif', fontSize: '14px',

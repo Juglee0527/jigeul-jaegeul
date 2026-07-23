@@ -12,6 +12,11 @@ const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
   normal: '보통',
   hard: '어려움',
 };
+const DIFFICULTY_COLORS: Readonly<Record<GameDifficulty, string>> = {
+  easy: '#6dff8b',
+  normal: '#fff36b',
+  hard: '#ff334f',
+};
 
 export class ResultScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
@@ -61,7 +66,7 @@ export class ResultScene extends Phaser.Scene {
         135,
         `${this.result.mode === 'daily' ? '오늘의 도전' : '일반 플레이'} · ${DIFFICULTY_LABELS[this.result.difficulty]}`,
         {
-          color: this.result.mode === 'daily' ? '#d9c4ff' : '#aaa0bb',
+          color: DIFFICULTY_COLORS[this.result.difficulty],
           fontFamily: 'system-ui, sans-serif',
           fontSize: '21px',
           fontStyle: 'bold',
