@@ -3,8 +3,8 @@ import type { EnemyDefinition } from '../types/game';
 export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
   {
     id: 'lol',
-    name: '한마디',
-    messages: ['ㅋ', '왜', '넵', '네'],
+    name: '한글자',
+    messages: ['긁', '왜', '흠', '또'],
     archetype: 'normal',
     color: 0xff5c72,
     radius: 20,
@@ -15,8 +15,8 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
   },
   {
     id: 'okay',
-    name: '재촉',
-    messages: ['급해', '확인', '잠깐', '언제'],
+    name: '두글자',
+    messages: ['지긁', '재긁', '설마', '또요'],
     archetype: 'normal',
     color: 0xff7a59,
     radius: 21,
@@ -27,8 +27,8 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
   },
   {
     id: 'five-minutes',
-    name: '추가업무',
-    messages: ['회의중', '수정요', '보고서', '오분만'],
+    name: '세글자',
+    messages: ['아직도', '언제해', '빨리해', '무쉰사'],
     archetype: 'normal',
     color: 0xf08bc8,
     radius: 23,
@@ -39,8 +39,8 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
   },
   {
     id: 'urgent-deploy',
-    name: '긴급 배포',
-    messages: ['긴급배포', '오늘마감', '지금통화', '재작업요'],
+    name: '네글자',
+    messages: ['지긁재긁', '쉽잖아요', 'AI한테', '이것밖에'],
     archetype: 'charger',
     color: 0xff304f,
     radius: 24,
@@ -55,8 +55,8 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
   },
   {
     id: 'two-hour-meeting',
-    name: '회의 2시간',
-    messages: ['회의잡을게요', '잠깐통화돼요', '내일까지주세요', '처음부터다시'],
+    name: '다섯글자',
+    messages: ['왜오래걸려', '언제끝나냐', '아답답하다', '차라리내가'],
     archetype: 'tank',
     color: 0x8f5bff,
     radius: 34,
