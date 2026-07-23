@@ -298,7 +298,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openUpgradeSelection(): void {
-    const choices = this.upgradeSystem.getChoices();
+    const choices = this.upgradeSystem.getChoices(this.activePlayTimeMs / 1000);
     if (choices.length === 0) {
       return;
     }

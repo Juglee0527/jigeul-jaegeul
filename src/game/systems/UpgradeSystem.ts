@@ -12,6 +12,12 @@ const RARITY_WEIGHTS: Readonly<Record<UpgradeRarity, number>> = {
 
 const EPIC_PITY_THRESHOLD = 6;
 const LEGENDARY_PITY_THRESHOLD = 14;
+const RARITY_UNLOCK_SECONDS: Readonly<Record<UpgradeRarity, number>> = {
+  common: 0,
+  rare: 30,
+  epic: 60,
+  legendary: 90,
+};
 
 export class UpgradeSystem {
   private readonly levels = new Map<string, number>();
@@ -20,8 +26,11 @@ export class UpgradeSystem {
 
   constructor(private readonly random: RandomSource) {}
 
-  getChoices(count = 3): UpgradeDefinition[] {
-    const pool = UPGRADES.filter((upgrade) => this.getLevel(upgrade.id) < upgrade.maxLevel);
+  getChoices(survivalSeconds = 0, count = 3): UpgradeDefinition[] {
+    const pool = UPGRADES.filter((upgrade) => (
+      this.getLevel(upgrade.id) < upgrade.maxLevel
+      && survivalSeconds >= RARITY_UNLOCK_SECONDS[upgrade.rarity]
+    ));
     const choices: UpgradeDefinition[] = [];
 
     const guaranteedRarity = this.getGuaranteedRarity(pool);
@@ -39,15 +48,19 @@ export class UpgradeSystem {
       pool.splice(pool.indexOf(selected), 1);
     }
 
-    if (choices.some((upgrade) => upgrade.rarity === 'legendary')) {
-      this.offersWithoutLegendary = 0;
-    } else {
-      this.offersWithoutLegendary += 1;
+    if (survivalSeconds >= RARITY_UNLOCK_SECONDS.legendary) {
+      if (choices.some((upgrade) => upgrade.rarity === 'legendary')) {
+        this.offersWithoutLegendary = 0;
+      } else {
+        this.offersWithoutLegendary += 1;
+      }
     }
-    if (choices.some((upgrade) => upgrade.rarity === 'epic' || upgrade.rarity === 'legendary')) {
-      this.offersWithoutEpic = 0;
-    } else {
-      this.offersWithoutEpic += 1;
+    if (survivalSeconds >= RARITY_UNLOCK_SECONDS.epic) {
+      if (choices.some((upgrade) => upgrade.rarity === 'epic' || upgrade.rarity === 'legendary')) {
+        this.offersWithoutEpic = 0;
+      } else {
+        this.offersWithoutEpic += 1;
+      }
     }
 
     return choices;
