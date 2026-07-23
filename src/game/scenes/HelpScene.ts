@@ -27,13 +27,15 @@ export class HelpScene extends Phaser.Scene {
     const instructions = [
       ['이동', 'WASD 또는 방향키'],
       ['공격', '가장 가까운 적에게 자동 발사'],
-      ['성장', '경험치를 모아 능력 카드 하나 선택'],
-      ['일시정지', 'ESC 또는 브라우저 창 벗어나기'],
-      ['목표', '긁히지 말고 최대한 오래 버티기'],
+      ['성장', '능력은 일반·희귀·에픽·전설, 최대 3레벨'],
+      ['보스', '5분과 10분에 등장 · 전투 중 시간 정지'],
+      ['보물', '보스를 처치하고 전설 능력 획득'],
+      ['목표', '10분 최종 보스를 처치하면 승리'],
+      ['일시정지', 'ESC · 위아래 선택 · 상세 능력치 확인'],
     ];
 
     instructions.forEach(([label, description], index) => {
-      const y = 180 + index * 62;
+      const y = 165 + index * 57;
       this.add
         .text(310, y, label, {
           color: '#fff36b',

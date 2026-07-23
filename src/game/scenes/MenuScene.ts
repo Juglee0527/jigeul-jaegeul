@@ -30,7 +30,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.circle(1120, 86, 260, COLORS.secondary, 0.07);
     this.add.circle(105, 680, 230, COLORS.primary, 0.05);
 
-    this.add.text(68, 58, '5분 생존 로그라이크', {
+    this.add.text(68, 58, '10분 보스 생존 로그라이크', {
       color: '#ff9bea',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '17px',
@@ -46,7 +46,7 @@ export class MenuScene extends Phaser.Scene {
       stroke: '#4b1742',
       strokeThickness: 8,
     });
-    this.add.text(70, 218, '긁히면 진다.\n버티면 전설이 된다.', {
+    this.add.text(70, 218, '5분 보스를 넘고,\n10분 최종 보스를 끝내라.', {
       color: '#cfc4dc',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '25px',
@@ -77,7 +77,7 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 422, '최고 점수', records.highScore.toLocaleString('ko-KR'));
     this.createStat(270, 422, '최장 생존', this.formatTime(records.longestSurvivalSeconds));
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
-    this.createStat(270, 515, '생존 목표', '05:00');
+    this.createStat(270, 515, '클리어 목표', '10:00 + 최종 보스');
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 36, '↑ ↓ 메뉴 선택  ·  ENTER 확인  ·  WASD / 방향키 이동', {
       color: '#6f6578',

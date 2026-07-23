@@ -63,6 +63,7 @@ src/
 | MenuScene | 모드 선택, 최고 기록, 게임 방법 |
 | GameScene | 월드 시뮬레이션과 시스템 조정 |
 | UpgradeScene | 게임을 멈추고 좌우 방향키 포커스·Enter 확정 방식으로 능력 선택 처리 |
+| PauseScene | 전체 능력치 표시와 위·아래 방향키 메뉴 처리 |
 | ResultScene | 결과 계산·저장·표시와 재시작 |
 
 `UpgradeScene`은 `GameScene` 위에 겹쳐 실행하고 게임 시간을 명시적으로 멈춘다. 타이머, 물리, 적 생성이 함께 멈춰야 한다.
@@ -91,6 +92,7 @@ interface GameResult {
   killCount: number;
   bossKillCount: number;
   level: number;
+  victory?: boolean;
 }
 
 interface WaveConfig {
@@ -103,7 +105,7 @@ interface WaveConfig {
 }
 ```
 
-능력은 식별자, 이름, 설명, 최대 레벨, 희귀도와 레벨별 효과를 데이터로 가진다. 데이터 파일에 Phaser 객체나 Scene 참조를 넣지 않고, 시스템이 데이터에 따라 플레이어 상태를 변경하도록 한다.
+능력은 식별자, 이름, 설명, 최대 3레벨, 4단계 희귀도와 효과를 데이터로 가진다. `UpgradeSystem`은 생존 시간으로 등급 잠금을 필터링하고 희귀도 가중치와 보장 횟수를 적용한다. 데이터 파일에 Phaser 객체나 Scene 참조를 넣지 않는다.
 
 ## 5. 주요 데이터 흐름
 
@@ -113,12 +115,13 @@ Game Clock → WaveSystem → EnemySpawner
 자동 공격 타이머 → 전역 최근접 대상 탐색 → Player 부착 총기 회전·반동 → 매 프레임 직접 이동하는 방향성 Projectile 일제 사격
 충돌 → 피해 → 적 사망 → 경험치/처치/점수
 경험치 획득 → LevelSystem → UpgradeScene
-플레이어 사망 → GameResult → 점수 계산 → StorageService → ResultScene
+5분/10분 도달 → 보스 생성 → 타이머 정지 → 보스 처치 → 전설 보물상자 → UpgradeScene
+플레이어 사망 또는 최종 보스 승리 → GameResult → 점수 계산 → StorageService → ResultScene
 ```
 
 적 생성 시 시드 난수로 유형별 멘트를 선택한다. `Enemy`는 최대 체력과 현재 체력을 관리하고 피해를 받을 때 부착 체력바의 비율과 색상을 갱신한다. `UpgradeScene`은 현재 `PlayerStats` 복사본을 받아 각 modifier 적용 전·후 값을 계산해 표시한다.
 
-`Hud`의 상세 능력치 패널은 시작과 능력 적용 시 3초 타이머를 다시 시작한 뒤 작은 요약 패널로 접힌다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 계속 표시한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
+`Hud`는 공격력·공격속도·공격거리·탄환 수만 상시 표시한다. `PauseScene`은 `GameScene`의 현재 `PlayerStats`를 읽어 전체 능력치를 표시하고 위·아래 방향키와 Enter로 메뉴를 조작한다. 공격속도 카드는 초당 발사 횟수가 아니라 감소하는 발사 간격을 초 단위로 표시해 성장 방향을 명확하게 한다.
 
 메인 메뉴는 위·아래 방향키로 포커스를 순환하고 Enter로 선택한다. 체력이 0이 된 플레이어에게는 재생을 적용하지 않으며, 접촉 피해 콜백에서 즉시 게임 종료를 확정해 다음 프레임 재생으로 되살아나는 경로를 차단한다. HUD 경험치는 `현재 / 필요 (정수%)` 형식으로 표시한다.
 
