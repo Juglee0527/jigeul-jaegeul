@@ -107,6 +107,8 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private resumeGame(): void {
+    const gameScene = this.scene.get('GameScene') as GameScene;
+    gameScene.grantResumeProtection();
     this.audio.play('confirm');
     this.audio.setMood('game');
     this.scene.resume('GameScene');

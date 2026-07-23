@@ -99,6 +99,7 @@ export class GameScene extends Phaser.Scene {
     this.experienceGems = this.physics.add.group();
     this.treasureChests = this.physics.add.group();
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    this.player.grantResumeProtection(this.combatTimeMs);
     this.levelSystem = new LevelSystem();
     this.upgradeSystem = new UpgradeSystem(
       new SeededRandom(`${this.session.seed}:upgrades`),
@@ -376,6 +377,7 @@ export class GameScene extends Phaser.Scene {
 
   applyUpgrade(id: string): void {
     this.upgradeSystem.apply(id, this.player);
+    this.player.grantResumeProtection(this.combatTimeMs);
     this.audio.play('confirm');
     this.audio.setMood('game');
     this.choosingUpgrade = false;
@@ -387,6 +389,10 @@ export class GameScene extends Phaser.Scene {
 
   getPlayerStats(): Readonly<Player['stats']> {
     return this.player.stats;
+  }
+
+  grantResumeProtection(): void {
+    this.player.grantResumeProtection(this.combatTimeMs);
   }
 
   private openUpgradeSelection(): void {

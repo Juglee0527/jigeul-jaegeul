@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import type { PlayerStats, StatModifier } from '../types/game';
 
 const INVULNERABILITY_MS = 800;
+const RESUME_PROTECTION_MS = 1_000;
 
 type MovementKeys = Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
 
@@ -108,6 +109,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
 
     return true;
+  }
+
+  grantResumeProtection(now: number, duration = RESUME_PROTECTION_MS): void {
+    this.invulnerableUntil = Math.max(this.invulnerableUntil, now + duration);
+    this.scene.tweens.killTweensOf(this);
+    this.setAlpha(0.5);
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 1,
+      duration: 125,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => {
+        if (this.active) {
+          this.setAlpha(1);
+        }
+      },
+    });
   }
 
   applyStatModifier(modifier: StatModifier): void {
