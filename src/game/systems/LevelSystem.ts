@@ -16,6 +16,6 @@ export class LevelSystem {
   }
 
   private calculateRequiredExperience(level: number): number {
-    return Math.floor(10 * Math.pow(1.25, level - 1));
+    return Math.floor(3 * Math.pow(1.38, level - 1));
   }
 }
