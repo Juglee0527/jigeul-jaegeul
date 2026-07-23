@@ -13,12 +13,14 @@ interface UpgradeSceneData {
 }
 
 const RARITY_LABELS: Record<UpgradeRarity, string> = {
+  epic: '에픽',
   common: '일반',
   rare: '희귀',
   legendary: '전설',
 };
 
 const RARITY_COLORS: Record<UpgradeRarity, number> = {
+  epic: 0xc45cff,
   common: 0x75657f,
   rare: 0x8f5bff,
   legendary: 0xffb13b,
@@ -93,6 +95,17 @@ export class UpgradeScene extends Phaser.Scene {
   private createCard(x: number, y: number, upgrade: UpgradeDefinition, index: number): void {
     const currentLevel = this.levels[upgrade.id] ?? 0;
     const accent = RARITY_COLORS[upgrade.rarity];
+    if (upgrade.rarity === 'epic' || upgrade.rarity === 'legendary') {
+      const glow = this.add.rectangle(x, y, 350, 414, accent, upgrade.rarity === 'legendary' ? 0.14 : 0.08);
+      this.tweens.add({
+        targets: glow,
+        alpha: 0.02,
+        scale: 1.04,
+        duration: upgrade.rarity === 'legendary' ? 650 : 950,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
     const card = this.add.rectangle(x, y, 332, 396, 0x15101d, 0.98)
       .setStrokeStyle(2, accent, 0.55)
       .setInteractive({ useHandCursor: true })

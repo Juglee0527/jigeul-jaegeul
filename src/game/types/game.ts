@@ -52,7 +52,7 @@ export interface PlayerStats {
 }
 
 export type PlayerStatKey = keyof PlayerStats;
-export type UpgradeRarity = 'common' | 'rare' | 'legendary';
+export type UpgradeRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface StatModifier {
   stat: PlayerStatKey;
