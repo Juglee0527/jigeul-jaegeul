@@ -99,7 +99,7 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
     this.createStat(270, 515, '클리어 목표', '최종 보스 격파');
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 26, '↑ ↓ 메뉴 선택  ·  ← → 난이도  ·  ENTER 확인', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 26, '↑ ↓ 메뉴 선택  ·  ← → 난이도  ·  ENTER 선택', {
       color: '#6f6578',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
