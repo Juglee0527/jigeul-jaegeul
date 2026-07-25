@@ -448,7 +448,7 @@ export class GameScene extends Phaser.Scene {
       return true;
     }
 
-    this.showKillEffect(dropX, dropY, experienceValue);
+    this.showKillEffect(dropX, dropY);
     this.player.heal(this.combatEffects.onKillHeal);
     if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
       this.experienceGems.add(new ExperienceGem(this, dropX, dropY, experienceValue));
@@ -1111,20 +1111,11 @@ export class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
 
-  private showKillEffect(x: number, y: number, experienceValue: number): void {
+  private showKillEffect(x: number, y: number): void {
     const burst = this.add
       .circle(x, y, 18, COLORS.primary, 0.65)
       .setStrokeStyle(3, COLORS.projectile, 0.9)
       .setDepth(20);
-    const rewardText = this.add
-      .text(x, y - 18, `+${experienceValue} EXP`, {
-        color: '#fff36b',
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '15px',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
-      .setDepth(21);
 
     this.tweens.add({
       targets: burst,
@@ -1133,14 +1124,6 @@ export class GameScene extends Phaser.Scene {
       duration: 240,
       ease: 'Quad.easeOut',
       onComplete: () => burst.destroy(),
-    });
-    this.tweens.add({
-      targets: rewardText,
-      y: y - 46,
-      alpha: 0,
-      duration: 520,
-      ease: 'Quad.easeOut',
-      onComplete: () => rewardText.destroy(),
     });
   }
 
