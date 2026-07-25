@@ -110,8 +110,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
-    const minimumDamage = Math.max(1, amount * (1 - MAX_DAMAGE_REDUCTION_RATIO));
-    const reducedDamage = Math.max(minimumDamage, amount - this.stats.armor);
+    const damageReductionRatio = Phaser.Math.Clamp(
+      this.stats.armor * 0.1,
+      0,
+      MAX_DAMAGE_REDUCTION_RATIO,
+    );
+    const reducedDamage = Math.max(1, amount * (1 - damageReductionRatio));
     this.hp = Math.max(0, this.hp - reducedDamage);
     this.invulnerableUntil = now + INVULNERABILITY_MS;
     this.regenerationBlockedUntil = now + REGEN_DELAY_AFTER_HIT_MS;

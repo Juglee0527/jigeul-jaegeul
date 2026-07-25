@@ -9,7 +9,7 @@ const STAT_LABELS: Record<PlayerStatKey, string> = {
   projectileCount: '탄환 수',
   attackRange: '공격거리',
   pickupRange: '획득범위',
-  armor: '방어력',
+  armor: '피해감소',
   regeneration: '초당회복',
   enemySpeedMultiplier: '적 속도',
 };
@@ -25,7 +25,7 @@ export function getCombatStatLines(stats: PlayerStats): string[] {
     `탄환속도     ${formatNumber(stats.projectileSpeed)}`,
     `이동속도     ${formatNumber(stats.moveSpeed)}`,
     `획득범위     ${formatNumber(stats.pickupRange)}`,
-    `방어력       ${formatNumber(stats.armor)}  (피해 감소 최대 90%)`,
+    `피해감소     ${formatDamageReduction(stats.armor)}  (최대 90%)`,
     `초당회복     ${formatNumber(effectiveRegeneration)}  (멘탈의 최대 10%)`,
     `회복 재개    마지막 피격 1초 후`,
   ];
@@ -62,6 +62,9 @@ function formatStatChange(stat: PlayerStatKey, before: number, after: number): s
   if (stat === 'enemySpeedMultiplier') {
     return `${STAT_LABELS[stat]}  ${Math.round(before * 100)}% → ${Math.round(after * 100)}%`;
   }
+  if (stat === 'armor') {
+    return `${STAT_LABELS[stat]}  ${formatDamageReduction(before)} → ${formatDamageReduction(after)}`;
+  }
 
   const difference = after - before;
   const sign = difference >= 0 ? '+' : '';
@@ -79,4 +82,8 @@ function formatSeconds(cooldown: number): string {
 function formatNumber(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
+}
+
+function formatDamageReduction(armor: number): string {
+  return `${Math.round(Math.min(0.9, Math.max(0, armor * 0.1)) * 100)}%`;
 }

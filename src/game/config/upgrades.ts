@@ -16,7 +16,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'steel-mental',
     name: '강철 멘탈',
-    description: '최대 멘탈과 방어력을 올립니다',
+    description: '최대 멘탈과 피해 감소율을 올립니다',
     maxLevel: 3,
     rarity: 'common',
     weight: 1,
