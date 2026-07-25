@@ -35,6 +35,7 @@ const DIFFICULTY_MULTIPLIERS: Readonly<Record<GameDifficulty, number>> = {
   normal: 1,
   hard: 1.5,
 };
+const BOSS_TYPE_IDS = ['middle-manager', 'senior-manager', 'final-boss'] as const;
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
 const createCombatEffects = (): Record<UpgradeEffectKey, number> => ({
   bossDamage: 0,
@@ -87,6 +88,12 @@ export class GameScene extends Phaser.Scene {
   private secondBossSpawned = false;
   private finalBossSpawned = false;
   private activeBoss?: Enemy;
+  private activeBossIsFinal = false;
+  private activeBossStage = 1;
+  private lastBossType?: string;
+  private bossEnrageLevel = 0;
+  private nextBossEnrageAt = 0;
+  private nextBossSupportAt = 0;
   private nextBossPrimaryAt = 0;
   private nextBossSecondaryAt = 0;
   private bossBusyUntil = 0;
@@ -131,6 +138,12 @@ export class GameScene extends Phaser.Scene {
     this.secondBossSpawned = false;
     this.finalBossSpawned = false;
     this.activeBoss = undefined;
+    this.activeBossIsFinal = false;
+    this.activeBossStage = 1;
+    this.lastBossType = undefined;
+    this.bossEnrageLevel = 0;
+    this.nextBossEnrageAt = 0;
+    this.nextBossSupportAt = 0;
     this.nextBossPrimaryAt = 0;
     this.nextBossSecondaryAt = 0;
     this.bossBusyUntil = 0;
@@ -185,7 +198,13 @@ export class GameScene extends Phaser.Scene {
     // 같은 목표를 추적하는 적들이 한 점에 완전히 포개지지 않도록
     // 원형 물리 바디끼리 서로 밀어낸다. 바디가 스프라이트보다 조금
     // 작아서 외곽은 자연스럽게 살짝 겹칠 수 있다.
-    this.physics.add.collider(this.enemies, this.enemies);
+    this.physics.add.collider(
+      this.enemies,
+      this.enemies,
+      undefined,
+      this.shouldEnemiesCollide,
+      this,
+    );
     this.physics.add.collider(this.player, this.enemies, this.handlePlayerHit, undefined, this);
     this.physics.add.overlap(
       this.player,
@@ -237,13 +256,12 @@ export class GameScene extends Phaser.Scene {
     if (!this.firstBossSpawned && this.activePlayTimeMs >= this.firstBossTimeMs) {
       this.firstBossSpawned = true;
       this.activePlayTimeMs = this.firstBossTimeMs;
-      if (debugBossStage === 3) {
-        this.spawnBoss('final-boss', `${this.formatGameMinute(this.firstBossTimeMs)} · 최종 보스!`);
-      } else if (debugBossStage === 2) {
-        this.spawnBoss('senior-manager', `${this.formatGameMinute(this.firstBossTimeMs)} · 2단계 보스!`);
-      } else {
-        this.spawnBoss('middle-manager', `${this.formatGameMinute(this.firstBossTimeMs)} · 1단계 보스!`);
-      }
+      const stage = BOSS_DEBUG_ENABLED ? debugBossStage : 1;
+      this.spawnRandomBoss(
+        stage,
+        BOSS_DEBUG_ENABLED && debugBossStage === 3,
+        `${this.formatGameMinute(this.firstBossTimeMs)} · ${stage}단계 보스!`,
+      );
     }
     if (
       this.secondBossTimeMs !== undefined
@@ -252,16 +270,21 @@ export class GameScene extends Phaser.Scene {
     ) {
       this.secondBossSpawned = true;
       this.activePlayTimeMs = this.secondBossTimeMs;
-      this.spawnBoss('senior-manager', `${this.formatGameMinute(this.secondBossTimeMs)} · 2단계 보스!`);
+      this.spawnRandomBoss(2, false, `${this.formatGameMinute(this.secondBossTimeMs)} · 2단계 보스!`);
     }
     if (!this.finalBossSpawned && this.activePlayTimeMs >= this.gameDurationMs) {
       this.finalBossSpawned = true;
-      this.spawnBoss('final-boss', `${this.formatGameMinute(this.gameDurationMs)} · 최종 보스 등장!`);
+      this.spawnRandomBoss(3, true, `${this.formatGameMinute(this.gameDurationMs)} · 최종 보스 등장!`);
     }
 
     if (!this.activeBoss?.active && this.activePlayTimeMs >= this.nextSpawnAt && !this.finalBossSpawned) {
       this.enemySpawner.spawn(this.currentWave);
       this.nextSpawnAt = this.activePlayTimeMs + this.currentWave.spawnInterval;
+    }
+    if (this.activeBoss?.active && this.combatTimeMs >= this.nextBossSupportAt) {
+      this.enemySpawner.spawn(this.currentWave, 1);
+      this.nextBossSupportAt = this.combatTimeMs
+        + Math.max(2_800, 5_400 - this.activeBossStage * 250 - this.bossEnrageLevel * 250);
     }
     this.enemies.getChildren().forEach((gameObject) => {
       const enemy = gameObject as Enemy;
@@ -430,8 +453,8 @@ export class GameScene extends Phaser.Scene {
     const dropY = enemy.y;
     const experienceValue = enemy.experienceValue;
     const scoreLevel = enemy.scoreLevel;
-    const enemyId = enemy.enemyId;
     const isBoss = enemy.isBoss;
+    const defeatedFinalBoss = isBoss && enemy === this.activeBoss && this.activeBossIsFinal;
     if (!enemy.takeDamage(damage)) {
       return false;
     }
@@ -443,7 +466,7 @@ export class GameScene extends Phaser.Scene {
       this.scoreSystem.registerBossKill();
       this.activeBoss = undefined;
       this.bossProjectiles.clear(true, true);
-      if (enemyId === 'final-boss') {
+      if (defeatedFinalBoss) {
         this.endGame(this.gameDurationMs / 1000, true);
       } else {
         this.dropTreasure(dropX, dropY);
@@ -707,16 +730,24 @@ export class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
 
-  private spawnBoss(enemyId: string, announcement: string): void {
-    this.enemies.getChildren().forEach((gameObject) => {
-      const enemy = gameObject as Enemy;
-      if (enemy.active && !enemy.isBoss) {
-        enemy.destroy();
-      }
-    });
+  private spawnRandomBoss(stage: number, isFinal: boolean, announcement: string): void {
+    const candidates = BOSS_TYPE_IDS.filter((enemyId) => enemyId !== this.lastBossType);
+    const enemyId = this.bossPatternRandom.pick(candidates.length > 0 ? candidates : BOSS_TYPE_IDS);
+    this.lastBossType = enemyId;
+    const normalEnemies = this.enemies.getChildren()
+      .map((gameObject) => gameObject as Enemy)
+      .filter((enemy) => enemy.active && !enemy.isBoss);
+    this.combatRandom.shuffle(normalEnemies)
+      .slice(0, Math.floor(normalEnemies.length / 2))
+      .forEach((enemy) => enemy.destroy());
     this.projectiles.clear(true, true);
     this.bossProjectiles.clear(true, true);
-    this.activeBoss = this.enemySpawner.spawnBoss(enemyId);
+    this.activeBoss = this.enemySpawner.spawnBoss(enemyId, stage);
+    this.activeBossIsFinal = isFinal;
+    this.activeBossStage = stage;
+    this.bossEnrageLevel = 0;
+    this.nextBossEnrageAt = this.combatTimeMs + 15_000;
+    this.nextBossSupportAt = this.combatTimeMs + 3_800;
     this.nextBossPrimaryAt = this.combatTimeMs + 1_300;
     this.nextBossSecondaryAt = this.combatTimeMs + 3_400;
     this.bossBusyUntil = 0;
@@ -740,11 +771,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private shouldEnemiesCollide(
+    firstObject: ArcadeCollisionObject,
+    secondObject: ArcadeCollisionObject,
+  ): boolean {
+    const first = firstObject as Enemy;
+    const second = secondObject as Enemy;
+    return !first.isBoss && !second.isBoss;
+  }
+
   private updateBossPatterns(): void {
     const boss = this.activeBoss;
-    if (!boss?.active || this.gameEnded) {
+    if (!boss?.active || !boss.isInArena || this.gameEnded) {
       return;
     }
+    this.updateBossEnrage(boss);
     if (this.combatTimeMs < this.bossBusyUntil) {
       return;
     }
@@ -758,15 +799,36 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private updateBossEnrage(boss: Enemy): void {
+    if (this.combatTimeMs < this.nextBossEnrageAt) {
+      return;
+    }
+    this.bossEnrageLevel += 1;
+    this.nextBossEnrageAt += 15_000;
+    const multiplier = 1 + this.bossEnrageLevel * 0.12;
+    boss.setBossEnrageMultiplier(multiplier);
+    this.nextBossPrimaryAt = Math.max(this.combatTimeMs + 350, this.nextBossPrimaryAt - 450);
+    this.nextBossSecondaryAt = Math.max(this.combatTimeMs + 600, this.nextBossSecondaryAt - 450);
+    this.showCombatAnnouncement(
+      `보스 격노 ${this.bossEnrageLevel}단계 · 위력 ${Math.round(multiplier * 100)}%`,
+      '#ff6f91',
+    );
+    this.cameras.main.shake(180, 0.008);
+  }
+
+  private scaleBossCooldown(duration: number): number {
+    return duration / (1 + this.bossEnrageLevel * 0.09);
+  }
+
   private updateDashBoss(boss: Enemy): void {
     if (this.combatTimeMs >= this.nextBossPrimaryAt) {
-      this.nextBossPrimaryAt = this.combatTimeMs + 4_800;
+      this.nextBossPrimaryAt = this.combatTimeMs + this.scaleBossCooldown(4_800);
       this.bossBusyUntil = this.combatTimeMs + 1_250;
       this.telegraphBossDash(boss);
       return;
     }
     if (this.combatTimeMs >= this.nextBossSecondaryAt) {
-      this.nextBossSecondaryAt = this.combatTimeMs + 6_200;
+      this.nextBossSecondaryAt = this.combatTimeMs + this.scaleBossCooldown(6_200);
       this.bossBusyUntil = this.combatTimeMs + 720;
       boss.holdBossPosition(this.combatTimeMs + 650);
       this.telegraphBossAttack(boss, '압박 면담', 0xffb13b, 650, () => {
@@ -777,13 +839,13 @@ export class GameScene extends Phaser.Scene {
 
   private updateTeleportBoss(boss: Enemy): void {
     if (this.combatTimeMs >= this.nextBossPrimaryAt) {
-      this.nextBossPrimaryAt = this.combatTimeMs + 4_500;
+      this.nextBossPrimaryAt = this.combatTimeMs + this.scaleBossCooldown(4_500);
       this.bossBusyUntil = this.combatTimeMs + 1_050;
       this.teleportBossStrike(boss);
       return;
     }
     if (this.combatTimeMs >= this.nextBossSecondaryAt) {
-      this.nextBossSecondaryAt = this.combatTimeMs + 6_100;
+      this.nextBossSecondaryAt = this.combatTimeMs + this.scaleBossCooldown(6_100);
       this.bossBusyUntil = this.combatTimeMs + 760;
       boss.holdBossPosition(this.combatTimeMs + 700);
       this.telegraphBossAttack(boss, '십자 보고', 0x57c7ff, 700, () => {
@@ -795,7 +857,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateFinalBoss(boss: Enemy): void {
     if (this.combatTimeMs >= this.nextBossPrimaryAt) {
-      this.nextBossPrimaryAt = this.combatTimeMs + 3_900;
+      this.nextBossPrimaryAt = this.combatTimeMs + this.scaleBossCooldown(3_900);
       this.bossBusyUntil = this.combatTimeMs + 1_000;
       boss.holdBossPosition(this.combatTimeMs + 700);
       this.telegraphBossAttack(boss, '회전 결재선', 0xff4fd8, 700, () => {
@@ -804,7 +866,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.combatTimeMs >= this.nextBossSecondaryAt) {
-      this.nextBossSecondaryAt = this.combatTimeMs + 5_700;
+      this.nextBossSecondaryAt = this.combatTimeMs + this.scaleBossCooldown(5_700);
       this.bossBusyUntil = this.combatTimeMs + 1_200;
       this.telegraphDeadlineZone(boss);
     }
@@ -844,7 +906,12 @@ export class GameScene extends Phaser.Scene {
         if (!boss.active || this.gameEnded) {
           return;
         }
-        boss.dashBossToward(targetX, targetY, 720, this.combatTimeMs + 480);
+        boss.dashBossToward(
+          targetX,
+          targetY,
+          720 * (1 + this.bossEnrageLevel * 0.08),
+          this.combatTimeMs + 480,
+        );
         this.cameras.main.shake(260, 0.012);
         this.time.delayedCall(460, () => {
           if (boss.active && !this.gameEnded) {
@@ -936,7 +1003,9 @@ export class GameScene extends Phaser.Scene {
           return;
         }
         if (Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY) <= radius) {
-          this.damagePlayer(Math.round(16 * this.difficultyMultiplier));
+          this.damagePlayer(Math.round(
+            16 * this.difficultyMultiplier * (1 + this.bossEnrageLevel * 0.12),
+          ));
         }
         this.fireBossRadialBurstAt(targetX, targetY, 12, 225, 10, this.bossBurstRotation);
         this.cameras.main.shake(220, 0.012);
@@ -1059,8 +1128,10 @@ export class GameScene extends Phaser.Scene {
       x,
       y,
       angle,
-      speed,
-      Math.max(1, Math.round(damage * this.difficultyMultiplier)),
+      speed * (1 + this.bossEnrageLevel * 0.06),
+      Math.max(1, Math.round(
+        damage * this.difficultyMultiplier * (1 + this.bossEnrageLevel * 0.12),
+      )),
     ));
   }
 

@@ -3,7 +3,6 @@ import Phaser from 'phaser';
 import type { EnemyDefinition } from '../types/game';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-  readonly contactDamage: number;
   readonly experienceValue: number;
   readonly isBoss: boolean;
   readonly enemyId: string;
@@ -11,6 +10,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   private readonly definition: EnemyDefinition;
   private readonly speedMultiplier: number;
+  private readonly baseContactDamage: number;
   private readonly messageLabel: Phaser.GameObjects.Text;
   private readonly healthBarBackground: Phaser.GameObjects.Rectangle;
   private readonly healthBarFill: Phaser.GameObjects.Rectangle;
@@ -22,9 +22,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private charging = false;
   private readonly wanderPhase: number;
   private bossMovementOverrideUntil = 0;
+  private bossEnrageMultiplier = 1;
+  private enteredArena = false;
+  private despawnAt?: number;
+  private despawning = false;
+
+  get contactDamage(): number {
+    return Math.max(1, Math.round(this.baseContactDamage * this.bossEnrageMultiplier));
+  }
 
   get healthRatio(): number {
     return this.hp / this.maxHp;
+  }
+
+  get isInArena(): boolean {
+    return this.enteredArena;
   }
 
   constructor(
@@ -43,7 +55,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.maxHp = Math.ceil(definition.maxHp * hpMultiplier);
     this.hp = this.maxHp;
     this.speedMultiplier = speedMultiplier;
-    this.contactDamage = Math.max(1, Math.round(definition.contactDamage * damageMultiplier));
+    this.baseContactDamage = Math.max(1, Math.round(definition.contactDamage * damageMultiplier));
     this.experienceValue = definition.experienceValue;
     this.isBoss = definition.isBoss ?? false;
     this.enemyId = definition.id;
@@ -58,7 +70,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const collisionRadius = Math.max(10, Math.round(definition.radius * 0.58));
     const collisionOffset = definition.radius - collisionRadius;
     body.setCircle(collisionRadius, collisionOffset, collisionOffset);
-    body.setCollideWorldBounds(true);
+    body.setCollideWorldBounds(false);
 
     this.messageLabel = scene.add
       .text(x, y - definition.radius - 10, message, {
@@ -97,6 +109,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     globalSpeedMultiplier: number,
   ): void {
     this.updateAttachedUi();
+    if (this.updateLimitedLifetime(time)) {
+      return;
+    }
+    if (!this.enteredArena) {
+      const insideArena = this.x >= this.definition.radius
+        && this.x <= this.scene.scale.width - this.definition.radius
+        && this.y >= 105 + this.definition.radius
+        && this.y <= this.scene.scale.height - this.definition.radius;
+      if (insideArena) {
+        this.enteredArena = true;
+        (this.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+      } else {
+        this.moveToward(
+          { x: this.scene.scale.width / 2, y: this.scene.scale.height / 2 },
+          this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier,
+        );
+        return;
+      }
+    }
 
     if (this.definition.archetype === 'charger') {
       this.updateCharger(time, target, globalSpeedMultiplier);
@@ -125,6 +156,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   holdBossPosition(until: number): void {
     this.bossMovementOverrideUntil = Math.max(this.bossMovementOverrideUntil, until);
     this.setVelocity(0, 0);
+  }
+
+  setBossEnrageMultiplier(multiplier: number): void {
+    if (this.isBoss) {
+      this.bossEnrageMultiplier = Math.max(1, multiplier);
+    }
   }
 
   dashBossToward(x: number, y: number, speed: number, until: number): void {
@@ -218,7 +255,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
   }
 
-  private moveToward(target: Phaser.GameObjects.Components.Transform, speed: number): void {
+  private moveToward(target: { x: number; y: number }, speed: number): void {
     const direction = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
     if (direction.lengthSq() > 0) {
       direction.normalize().scale(speed);
@@ -235,9 +272,42 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const angle = this.wanderPhase
       + time * 0.00042
       + Math.sin(time * 0.0011 + this.wanderPhase) * 0.85;
-    const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
+    const speed = this.definition.moveSpeed
+      * this.speedMultiplier
+      * globalSpeedMultiplier
+      * this.bossEnrageMultiplier;
     this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     this.setRotation(angle);
+  }
+
+  private updateLimitedLifetime(time: number): boolean {
+    const lifetime = this.definition.archetype === 'flee'
+      ? 18_000
+      : this.definition.archetype === 'wanderer'
+        ? 24_000
+        : this.definition.archetype === 'orbiter' && !this.isBoss
+          ? 26_000
+          : undefined;
+    if (lifetime === undefined) {
+      return false;
+    }
+    this.despawnAt ??= time + lifetime;
+    if (time < this.despawnAt) {
+      return false;
+    }
+    if (!this.despawning) {
+      this.despawning = true;
+      this.setVelocity(0, 0);
+      (this.body as Phaser.Physics.Arcade.Body).enable = false;
+      this.scene.tweens.add({
+        targets: [this, this.messageLabel, this.healthBarBackground, this.healthBarFill],
+        alpha: 0,
+        scale: 0.65,
+        duration: 320,
+        onComplete: () => this.destroy(),
+      });
+    }
+    return true;
   }
 
   private updateFleeing(

@@ -11,6 +11,12 @@ const ENEMY_LEVEL_RANGES: Readonly<Record<GameDifficulty, readonly [number, numb
   normal: [1, 5],
   hard: [2, 6],
 };
+const NON_CHASING_ARCHETYPES = new Set(['wanderer', 'flee', 'orbiter']);
+const BOSS_STAGE_STATS = [
+  { maxHp: 520, moveSpeed: 62, contactDamage: 22, scoreLevel: 8 },
+  { maxHp: 1_500, moveSpeed: 54, contactDamage: 28, scoreLevel: 12 },
+  { maxHp: 3_200, moveSpeed: 66, contactDamage: 34, scoreLevel: 18 },
+] as const;
 
 export class EnemySpawner {
   constructor(
@@ -25,10 +31,18 @@ export class EnemySpawner {
     const availableSlots = wave.maxEnemies - this.group.countActive(true);
     const spawnCount = Math.min(spawnLimit, Math.max(0, availableSlots));
     const [minimumLevel, maximumLevel] = ENEMY_LEVEL_RANGES[this.difficulty];
-    const eligibleEnemies = wave.enemies.filter(({ enemyId }) => {
-      const level = getEnemyDefinition(enemyId).scoreLevel ?? 1;
-      return level >= minimumLevel && level <= maximumLevel;
-    });
+    const eligibleEnemies = wave.enemies
+      .filter(({ enemyId }) => {
+        const level = getEnemyDefinition(enemyId).scoreLevel ?? 1;
+        return level >= minimumLevel && level <= maximumLevel;
+      })
+      .map((entry) => {
+        const archetype = getEnemyDefinition(entry.enemyId).archetype;
+        return {
+          ...entry,
+          weight: NON_CHASING_ARCHETYPES.has(archetype) ? entry.weight * 0.5 : entry.weight,
+        };
+      });
     if (eligibleEnemies.length === 0) {
       return;
     }
@@ -52,18 +66,19 @@ export class EnemySpawner {
     }
   }
 
-  spawnBoss(enemyId: string): Enemy {
+  spawnBoss(enemyId: string, stage: number): Enemy {
     const definition = getEnemyDefinition(enemyId);
-    const position = this.getSpawnPosition(definition.radius);
+    const stageStats = BOSS_STAGE_STATS[Phaser.Math.Clamp(stage - 1, 0, BOSS_STAGE_STATS.length - 1)];
+    const position = new Phaser.Math.Vector2(GAME_WIDTH / 2, 235);
     const boss = new Enemy(
       this.scene,
       position.x,
       position.y,
-      definition,
+      { ...definition, scoreLevel: stageStats.scoreLevel },
       this.random.pick(definition.messages),
-      this.difficultyMultiplier,
-      this.difficultyMultiplier,
-      this.difficultyMultiplier,
+      (stageStats.maxHp / definition.maxHp) * this.difficultyMultiplier,
+      (stageStats.moveSpeed / definition.moveSpeed) * this.difficultyMultiplier,
+      (stageStats.contactDamage / definition.contactDamage) * this.difficultyMultiplier,
     );
     this.group.add(boss);
     return boss;
@@ -84,31 +99,32 @@ export class EnemySpawner {
   }
 
   private getSpawnPosition(radius: number): Phaser.Math.Vector2 {
-    const margin = radius + 6;
-    const topMargin = 70 + radius;
+    const outside = radius + 12;
+    const insideMargin = radius + 8;
+    const topMargin = 105 + radius;
     const side = this.random.nextInt(0, 3);
 
     if (side === 0) {
       return new Phaser.Math.Vector2(
-        margin,
-        this.random.nextInt(topMargin, GAME_HEIGHT - margin),
+        -outside,
+        this.random.nextInt(topMargin, GAME_HEIGHT - insideMargin),
       );
     }
     if (side === 1) {
       return new Phaser.Math.Vector2(
-        GAME_WIDTH - margin,
-        this.random.nextInt(topMargin, GAME_HEIGHT - margin),
+        GAME_WIDTH + outside,
+        this.random.nextInt(topMargin, GAME_HEIGHT - insideMargin),
       );
     }
     if (side === 2) {
       return new Phaser.Math.Vector2(
-        this.random.nextInt(margin, GAME_WIDTH - margin),
-        topMargin,
+        this.random.nextInt(insideMargin, GAME_WIDTH - insideMargin),
+        -outside,
       );
     }
     return new Phaser.Math.Vector2(
-      this.random.nextInt(margin, GAME_WIDTH - margin),
-      GAME_HEIGHT - margin,
+      this.random.nextInt(insideMargin, GAME_WIDTH - insideMargin),
+      GAME_HEIGHT + outside,
     );
   }
 }
