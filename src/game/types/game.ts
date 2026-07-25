@@ -65,6 +65,31 @@ export interface StatModifier {
   value: number;
 }
 
+export type UpgradeEffectKey =
+  | 'bossDamage'
+  | 'chainDamage'
+  | 'chainTargets'
+  | 'criticalChance'
+  | 'criticalMultiplier'
+  | 'echoShotChance'
+  | 'executeThreshold'
+  | 'explosionDamage'
+  | 'explosionRadius'
+  | 'nova'
+  | 'onKillHeal'
+  | 'pierce'
+  | 'projectileScale'
+  | 'rearShot'
+  | 'retaliationDamage'
+  | 'revive'
+  | 'shield'
+  | 'sideShot';
+
+export interface UpgradeEffect {
+  key: UpgradeEffectKey;
+  value: number;
+}
+
 export interface UpgradeDefinition {
   id: string;
   name: string;
@@ -72,7 +97,9 @@ export interface UpgradeDefinition {
   maxLevel: number;
   rarity: UpgradeRarity;
   weight: number;
-  modifiers: readonly StatModifier[];
+  modifiers?: readonly StatModifier[];
+  effects?: readonly UpgradeEffect[];
+  special?: string;
 }
 
 export type EnemyArchetype = 'normal' | 'wanderer' | 'charger' | 'tank';

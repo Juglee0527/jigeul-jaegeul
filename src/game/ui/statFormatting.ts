@@ -15,6 +15,7 @@ const STAT_LABELS: Record<PlayerStatKey, string> = {
 };
 
 export function getCombatStatLines(stats: PlayerStats): string[] {
+  const effectiveRegeneration = Math.min(stats.regeneration, stats.maxHp * 0.1);
   return [
     `공격력       ${formatNumber(stats.attackDamage)}`,
     `공격속도     ${formatRate(stats.attackCooldown)}발/초`,
@@ -24,26 +25,28 @@ export function getCombatStatLines(stats: PlayerStats): string[] {
     `탄환속도     ${formatNumber(stats.projectileSpeed)}`,
     `이동속도     ${formatNumber(stats.moveSpeed)}`,
     `획득범위     ${formatNumber(stats.pickupRange)}`,
-    `방어력       ${formatNumber(stats.armor)}`,
-    `초당회복     ${formatNumber(stats.regeneration)}`,
+    `방어력       ${formatNumber(stats.armor)}  (피해 감소 최대 90%)`,
+    `초당회복     ${formatNumber(effectiveRegeneration)}  (멘탈의 최대 10%)`,
+    `회복 재개    마지막 피격 1초 후`,
   ];
 }
 
 export function getCompactStatLines(stats: PlayerStats): string[] {
   return [
-    `공격 ${formatNumber(stats.attackDamage)}   속도 ${formatRate(stats.attackCooldown)}`,
+    `공격 ${formatNumber(stats.attackDamage)}   ${formatRate(stats.attackCooldown)}발/초`,
     `거리 ${formatNumber(stats.attackRange)}   탄환 ${formatNumber(stats.projectileCount)}`,
   ];
 }
 
 export function formatUpgradeChanges(upgrade: UpgradeDefinition, stats: PlayerStats): string[] {
   const simulated = { ...stats };
-  return upgrade.modifiers.map((modifier) => {
+  const statChanges = (upgrade.modifiers ?? []).map((modifier) => {
     const before = simulated[modifier.stat];
     const after = applyModifier(before, modifier);
     simulated[modifier.stat] = after;
     return formatStatChange(modifier.stat, before, after);
   });
+  return upgrade.special ? [upgrade.special, ...statChanges] : statChanges;
 }
 
 function applyModifier(value: number, modifier: StatModifier): number {
@@ -52,8 +55,9 @@ function applyModifier(value: number, modifier: StatModifier): number {
 
 function formatStatChange(stat: PlayerStatKey, before: number, after: number): string {
   if (stat === 'attackCooldown') {
-    const percent = ((after / before) - 1) * 100;
-    return `${STAT_LABELS[stat]}  ${formatSeconds(before)}초 → ${formatSeconds(after)}초  (${Math.round(percent)}%)`;
+    const beforeRate = formatRate(before);
+    const afterRate = formatRate(after);
+    return `공격속도  ${beforeRate}발/초 → ${afterRate}발/초`;
   }
   if (stat === 'enemySpeedMultiplier') {
     return `${STAT_LABELS[stat]}  ${Math.round(before * 100)}% → ${Math.round(after * 100)}%`;

@@ -13,7 +13,13 @@ import { EnemySpawner } from '../systems/EnemySpawner';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WaveSystem } from '../systems/WaveSystem';
-import type { GameDifficulty, GameSession, WaveConfig } from '../types/game';
+import type {
+  GameDifficulty,
+  GameSession,
+  UpgradeEffect,
+  UpgradeEffectKey,
+  WaveConfig,
+} from '../types/game';
 import { Hud } from '../ui/Hud';
 
 const MAX_EXPERIENCE_GEMS = 180;
@@ -35,6 +41,26 @@ const DIFFICULTY_MULTIPLIERS: Readonly<Record<GameDifficulty, number>> = {
   hard: 1.5,
 };
 type ArcadeCollisionObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
+const createCombatEffects = (): Record<UpgradeEffectKey, number> => ({
+  bossDamage: 0,
+  chainDamage: 0,
+  chainTargets: 0,
+  criticalChance: 0,
+  criticalMultiplier: 0,
+  echoShotChance: 0,
+  executeThreshold: 0,
+  explosionDamage: 0,
+  explosionRadius: 0,
+  nova: 0,
+  onKillHeal: 0,
+  pierce: 0,
+  projectileScale: 0,
+  rearShot: 0,
+  retaliationDamage: 0,
+  revive: 0,
+  shield: 0,
+  sideShot: 0,
+});
 
 export class GameScene extends Phaser.Scene {
   private readonly audio = AudioManager.getInstance();
@@ -68,6 +94,10 @@ export class GameScene extends Phaser.Scene {
   private bossBusyUntil = 0;
   private bossBurstRotation = 0;
   private bossPatternRandom!: SeededRandom;
+  private combatRandom!: SeededRandom;
+  private combatEffects = createCombatEffects();
+  private nextNovaAt = Number.POSITIVE_INFINITY;
+  private shieldReadyAt = 0;
   private endAfterUpgrade = false;
 
   constructor() {
@@ -96,6 +126,9 @@ export class GameScene extends Phaser.Scene {
     this.nextBossSecondaryAt = 0;
     this.bossBusyUntil = 0;
     this.bossBurstRotation = 0;
+    this.combatEffects = createCombatEffects();
+    this.nextNovaAt = Number.POSITIVE_INFINITY;
+    this.shieldReadyAt = 0;
     this.endAfterUpgrade = false;
     this.activePlayTimeMs = 0;
     this.combatTimeMs = 0;
@@ -121,6 +154,7 @@ export class GameScene extends Phaser.Scene {
       new SeededRandom(`${this.session.seed}:upgrades`),
     );
     this.bossPatternRandom = new SeededRandom(`${this.session.seed}:boss-patterns`);
+    this.combatRandom = new SeededRandom(`${this.session.seed}:combat-effects`);
     this.waveSystem = new WaveSystem();
     this.scoreSystem = new ScoreSystem(this.session);
     this.enemySpawner = new EnemySpawner(
@@ -187,7 +221,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.activeBoss?.active) {
       this.activePlayTimeMs = Math.min(GAME_DURATION_MS, this.activePlayTimeMs + delta);
     }
-    this.player.update(delta);
+    this.player.update(delta, this.combatTimeMs);
     const survivalSeconds = this.activePlayTimeMs / 1000;
     this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
 
@@ -241,6 +275,7 @@ export class GameScene extends Phaser.Scene {
       projectile.updateTravel(delta);
     });
     this.updateBossPatterns();
+    this.updateCombatEffects();
 
     if (this.combatTimeMs >= this.nextAttackAt && this.autoAttack()) {
       this.nextAttackAt = this.combatTimeMs + this.player.stats.attackCooldown;
@@ -295,29 +330,55 @@ export class GameScene extends Phaser.Scene {
       nearestEnemy.x,
       nearestEnemy.y,
     );
-    const projectileCount = Math.max(1, Math.round(this.player.stats.projectileCount));
-    const spreadRadians = Phaser.Math.DegToRad(projectileCount > 3 ? 12 : 8);
-
     this.player.fireWeapon(baseAngle);
     this.audio.play('shoot');
-    for (let index = 0; index < projectileCount; index += 1) {
-      const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
-      const shotAngle = baseAngle + offset;
-      const muzzleDistance = 44;
-      this.projectiles.add(
-        new Projectile(
-          this,
-          this.player.x + Math.cos(shotAngle) * muzzleDistance,
-          this.player.y + Math.sin(shotAngle) * muzzleDistance,
-          shotAngle,
-          this.player.stats.projectileSpeed,
-          this.player.stats.attackDamage,
-          this.player.stats.attackRange,
-        ),
-      );
+    this.spawnPlayerVolley(baseAngle);
+
+    const rearShotCount = Math.floor(this.combatEffects.rearShot);
+    for (let index = 0; index < rearShotCount; index += 1) {
+      const offset = (index - (rearShotCount - 1) / 2) * Phaser.Math.DegToRad(10);
+      this.spawnPlayerProjectile(baseAngle + Math.PI + offset);
+    }
+    const sideShotCount = Math.floor(this.combatEffects.sideShot);
+    for (let index = 0; index < sideShotCount; index += 1) {
+      const offset = (index - (sideShotCount - 1) / 2) * Phaser.Math.DegToRad(10);
+      this.spawnPlayerProjectile(baseAngle + Math.PI / 2 + offset);
+      this.spawnPlayerProjectile(baseAngle - Math.PI / 2 - offset);
+    }
+    if (this.combatRandom.next() < Math.min(0.8, this.combatEffects.echoShotChance)) {
+      this.spawnPlayerVolley(baseAngle, 0.75);
     }
 
     return true;
+  }
+
+  private spawnPlayerVolley(baseAngle: number, damageMultiplier = 1): void {
+    const projectileCount = Math.max(1, Math.round(this.player.stats.projectileCount));
+    const spreadRadians = Phaser.Math.DegToRad(projectileCount > 3 ? 12 : 8);
+    for (let index = 0; index < projectileCount; index += 1) {
+      const offset = (index - (projectileCount - 1) / 2) * spreadRadians;
+      this.spawnPlayerProjectile(baseAngle + offset, damageMultiplier);
+    }
+  }
+
+  private spawnPlayerProjectile(angle: number, damageMultiplier = 1): void {
+    const critical = this.combatRandom.next() < Math.min(0.85, this.combatEffects.criticalChance);
+    const criticalMultiplier = critical ? 1 + this.combatEffects.criticalMultiplier : 1;
+    const muzzleDistance = 44;
+    this.projectiles.add(
+      new Projectile(
+        this,
+        this.player.x + Math.cos(angle) * muzzleDistance,
+        this.player.y + Math.sin(angle) * muzzleDistance,
+        angle,
+        this.player.stats.projectileSpeed,
+        this.player.stats.attackDamage * damageMultiplier * criticalMultiplier,
+        this.player.stats.attackRange,
+        Math.floor(this.combatEffects.pierce),
+        1 + this.combatEffects.projectileScale,
+        critical,
+      ),
+    );
   }
 
   private handleProjectileHit(
@@ -331,30 +392,95 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (!projectile.registerHit(enemy)) {
+      return;
+    }
+    const hitX = enemy.x;
+    const hitY = enemy.y;
+    let damage = projectile.damage * (enemy.isBoss ? 1 + this.combatEffects.bossDamage : 1);
+    if (!enemy.isBoss && enemy.healthRatio <= this.combatEffects.executeThreshold) {
+      damage = Number.MAX_SAFE_INTEGER;
+    }
+    this.showHitEffect(hitX, hitY);
+    this.audio.play('hit');
+    this.damageEnemy(enemy, damage, true);
+    if (this.combatEffects.chainTargets > 0 && this.combatEffects.chainDamage > 0) {
+      this.triggerChainLightning(enemy, hitX, hitY);
+    }
+  }
+
+  private damageEnemy(enemy: Enemy, damage: number, allowDeathEffects: boolean): boolean {
+    if (!enemy.active) {
+      return false;
+    }
     const dropX = enemy.x;
     const dropY = enemy.y;
-    const damage = projectile.damage;
-    projectile.destroy();
-    this.showHitEffect(dropX, dropY);
-    this.audio.play('hit');
-    if (enemy.takeDamage(damage)) {
-      this.audio.play('kill');
-      const scoreReward = this.scoreSystem.registerKill(enemy.scoreLevel);
-      this.hud.showScoreChange(scoreReward);
-      if (enemy.isBoss) {
-        this.scoreSystem.registerBossKill();
-        this.activeBoss = undefined;
-        this.bossProjectiles.clear(true, true);
-        this.dropTreasure(dropX, dropY, enemy.enemyId === 'final-boss');
-        return;
-      }
-      this.showKillEffect(dropX, dropY, enemy.experienceValue);
-      if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
-        this.experienceGems.add(
-          new ExperienceGem(this, dropX, dropY, enemy.experienceValue),
-        );
-      }
+    const experienceValue = enemy.experienceValue;
+    const scoreLevel = enemy.scoreLevel;
+    const enemyId = enemy.enemyId;
+    const isBoss = enemy.isBoss;
+    if (!enemy.takeDamage(damage)) {
+      return false;
     }
+
+    this.audio.play('kill');
+    const scoreReward = this.scoreSystem.registerKill(scoreLevel);
+    this.hud.showScoreChange(scoreReward);
+    if (isBoss) {
+      this.scoreSystem.registerBossKill();
+      this.activeBoss = undefined;
+      this.bossProjectiles.clear(true, true);
+      this.dropTreasure(dropX, dropY, enemyId === 'final-boss');
+      return true;
+    }
+
+    this.showKillEffect(dropX, dropY, experienceValue);
+    this.player.heal(this.combatEffects.onKillHeal);
+    if (this.experienceGems.countActive(true) < MAX_EXPERIENCE_GEMS) {
+      this.experienceGems.add(new ExperienceGem(this, dropX, dropY, experienceValue));
+    }
+    if (allowDeathEffects) {
+      this.triggerDeathExplosion(dropX, dropY, enemy);
+    }
+    return true;
+  }
+
+  private triggerDeathExplosion(x: number, y: number, defeatedEnemy: Enemy): void {
+    const radius = this.combatEffects.explosionRadius;
+    const damage = this.combatEffects.explosionDamage;
+    if (radius <= 0 || damage <= 0) {
+      return;
+    }
+    const blast = this.add.circle(x, y, radius, 0xff5bd6, 0.22)
+      .setStrokeStyle(3, 0xffb5ec, 0.9).setDepth(15);
+    this.tweens.add({ targets: blast, scale: 1.35, alpha: 0, duration: 260, onComplete: () => blast.destroy() });
+    this.enemies.getChildren().forEach((gameObject) => {
+      const target = gameObject as Enemy;
+      if (
+        target.active
+        && target !== defeatedEnemy
+        && Phaser.Math.Distance.Between(x, y, target.x, target.y) <= radius
+      ) {
+        this.damageEnemy(target, damage, false);
+      }
+    });
+  }
+
+  private triggerChainLightning(source: Enemy, x: number, y: number): void {
+    const targets = this.enemies.getChildren()
+      .map((gameObject) => gameObject as Enemy)
+      .filter((enemy) => enemy.active && enemy !== source)
+      .sort((left, right) => (
+        Phaser.Math.Distance.Squared(x, y, left.x, left.y)
+        - Phaser.Math.Distance.Squared(x, y, right.x, right.y)
+      ))
+      .slice(0, Math.floor(this.combatEffects.chainTargets));
+    targets.forEach((target) => {
+      const line = this.add.line(0, 0, x, y, target.x, target.y, 0x7fe8ff, 0.95)
+        .setOrigin(0).setLineWidth(3).setDepth(17);
+      this.tweens.add({ targets: line, alpha: 0, duration: 140, onComplete: () => line.destroy() });
+      this.damageEnemy(target, this.combatEffects.chainDamage, false);
+    });
   }
 
   private handleExperiencePickup(
@@ -397,6 +523,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private damagePlayer(amount: number): void {
+    if (this.combatEffects.shield > 0 && this.combatTimeMs >= this.shieldReadyAt) {
+      const cooldown = Math.max(4_000, 12_000 - (this.combatEffects.shield - 1) * 2_000);
+      this.shieldReadyAt = this.combatTimeMs + cooldown;
+      const shield = this.add.circle(this.player.x, this.player.y, 54, 0x5ce8ff, 0.16)
+        .setStrokeStyle(5, 0xbaf7ff, 1).setDepth(20);
+      this.tweens.add({
+        targets: shield,
+        scale: 1.45,
+        alpha: 0,
+        duration: 420,
+        onComplete: () => shield.destroy(),
+      });
+      return;
+    }
     if (!this.player.takeDamage(amount, this.combatTimeMs)) {
       return;
     }
@@ -407,13 +547,21 @@ export class GameScene extends Phaser.Scene {
     this.audio.play('hurt');
     this.cameras.main.shake(90, 0.006);
     this.cameras.main.flash(80, 255, 38, 70, false);
+    this.triggerRetaliation();
     if (this.player.hp <= 0) {
-      this.endGame(this.activePlayTimeMs / 1000);
+      if (this.combatEffects.revive >= 1) {
+        this.combatEffects.revive -= 1;
+        this.player.revive(0.45, this.combatTimeMs);
+        this.showCombatAnnouncement('다시 살아났다!', '#ffe66d');
+      } else {
+        this.endGame(this.activePlayTimeMs / 1000);
+      }
     }
   }
 
   applyUpgrade(id: string): void {
-    this.upgradeSystem.apply(id, this.player);
+    const upgrade = this.upgradeSystem.apply(id, this.player);
+    upgrade?.effects?.forEach((effect) => this.applyCombatEffect(effect));
     this.player.grantResumeProtection(this.combatTimeMs);
     this.audio.play('confirm');
     this.audio.setMood('game');
@@ -424,8 +572,81 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private applyCombatEffect(effect: UpgradeEffect): void {
+    this.combatEffects[effect.key] += effect.value;
+    if (effect.key === 'nova' && !Number.isFinite(this.nextNovaAt)) {
+      this.nextNovaAt = this.combatTimeMs + 1_500;
+    }
+    if (effect.key === 'shield' && this.combatEffects.shield === effect.value) {
+      this.shieldReadyAt = this.combatTimeMs;
+    }
+  }
+
+  private updateCombatEffects(): void {
+    const novaLevel = Math.floor(this.combatEffects.nova);
+    if (novaLevel <= 0 || this.combatTimeMs < this.nextNovaAt) {
+      return;
+    }
+    const projectileCount = 8 + novaLevel * 2;
+    for (let index = 0; index < projectileCount; index += 1) {
+      this.spawnPlayerProjectile((index / projectileCount) * Math.PI * 2, 0.65 + novaLevel * 0.2);
+    }
+    const pulse = this.add.circle(this.player.x, this.player.y, 42, 0xffd55a, 0.18)
+      .setStrokeStyle(4, 0xfff2ac, 0.95).setDepth(14);
+    this.tweens.add({
+      targets: pulse,
+      scale: 3,
+      alpha: 0,
+      duration: 420,
+      onComplete: () => pulse.destroy(),
+    });
+    this.nextNovaAt = this.combatTimeMs + Math.max(3_500, 8_000 - novaLevel * 1_200);
+  }
+
+  private triggerRetaliation(): void {
+    const damage = this.combatEffects.retaliationDamage;
+    if (damage <= 0) {
+      return;
+    }
+    const radius = 180;
+    const pulse = this.add.circle(this.player.x, this.player.y, radius, 0xff496c, 0.12)
+      .setStrokeStyle(4, 0xff8da1, 0.9).setDepth(16);
+    this.tweens.add({ targets: pulse, scale: 1.15, alpha: 0, duration: 260, onComplete: () => pulse.destroy() });
+    this.enemies.getChildren().forEach((gameObject) => {
+      const enemy = gameObject as Enemy;
+      if (
+        enemy.active
+        && Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y) <= radius
+      ) {
+        this.damageEnemy(enemy, damage, false);
+      }
+    });
+  }
+
+  private showCombatAnnouncement(message: string, color: string): void {
+    const text = this.add.text(this.player.x, this.player.y - 70, message, {
+      color,
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '25px',
+      fontStyle: 'bold',
+      stroke: '#170912',
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(30);
+    this.tweens.add({
+      targets: text,
+      y: text.y - 45,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => text.destroy(),
+    });
+  }
+
   getPlayerStats(): Readonly<Player['stats']> {
     return this.player.stats;
+  }
+
+  getAcquiredUpgrades(): ReturnType<UpgradeSystem['getAcquiredUpgrades']> {
+    return this.upgradeSystem.getAcquiredUpgrades();
   }
 
   grantResumeProtection(): void {

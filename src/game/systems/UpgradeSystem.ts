@@ -70,6 +70,12 @@ export class UpgradeSystem {
     return this.levels.get(id) ?? 0;
   }
 
+  getAcquiredUpgrades(): Array<{ upgrade: UpgradeDefinition; level: number }> {
+    return UPGRADES
+      .map((upgrade) => ({ upgrade, level: this.getLevel(upgrade.id) }))
+      .filter((entry) => entry.level > 0);
+  }
+
   getLegendaryChoices(count = 3): UpgradeDefinition[] {
     const pool = UPGRADES.filter((upgrade) => (
       upgrade.rarity === 'legendary'
@@ -84,7 +90,7 @@ export class UpgradeSystem {
     return choices;
   }
 
-  apply(id: string, player: Player): void {
+  apply(id: string, player: Player): UpgradeDefinition | undefined {
     const upgrade = UPGRADES.find((candidate) => candidate.id === id);
     if (!upgrade) {
       throw new Error(`알 수 없는 능력입니다: ${id}`);
@@ -92,11 +98,12 @@ export class UpgradeSystem {
 
     const currentLevel = this.getLevel(id);
     if (currentLevel >= upgrade.maxLevel) {
-      return;
+      return undefined;
     }
 
-    upgrade.modifiers.forEach((modifier) => player.applyStatModifier(modifier));
+    upgrade.modifiers?.forEach((modifier) => player.applyStatModifier(modifier));
     this.levels.set(id, currentLevel + 1);
+    return upgrade;
   }
 
   private getGuaranteedRarity(pool: readonly UpgradeDefinition[]): UpgradeRarity | undefined {

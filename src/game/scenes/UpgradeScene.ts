@@ -133,7 +133,10 @@ export class UpgradeScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 280 },
     }).setOrigin(0.5);
-    this.add.text(x, y - 26, `LV.${currentLevel}  →  LV.${currentLevel + 1}`, {
+    const nextLevelLabel = currentLevel + 1 >= upgrade.maxLevel
+      ? 'MAX'
+      : `LV.${currentLevel + 1}`;
+    this.add.text(x, y - 26, `LV.${currentLevel}  →  ${nextLevelLabel}`, {
       color: '#b7a9c2',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '17px',

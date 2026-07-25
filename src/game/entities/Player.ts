@@ -4,6 +4,9 @@ import type { PlayerStats, StatModifier } from '../types/game';
 
 const INVULNERABILITY_MS = 800;
 const RESUME_PROTECTION_MS = 1_000;
+const MAX_DAMAGE_REDUCTION_RATIO = 0.9;
+const MAX_REGEN_PER_SECOND_RATIO = 0.1;
+const REGEN_DELAY_AFTER_HIT_MS = 1_000;
 
 type MovementKeys = Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
 
@@ -28,6 +31,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly movementKeys: MovementKeys;
   private readonly weapon: Phaser.GameObjects.Image;
   private invulnerableUntil = 0;
+  private regenerationBlockedUntil = 0;
   private aimAngle = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -55,7 +59,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.movementKeys = keyboard.addKeys('W,A,S,D') as MovementKeys;
   }
 
-  update(delta: number): void {
+  update(delta: number, now: number): void {
     const horizontal = Number(this.cursorKeys.right.isDown || this.movementKeys.D.isDown)
       - Number(this.cursorKeys.left.isDown || this.movementKeys.A.isDown);
     const vertical = Number(this.cursorKeys.down.isDown || this.movementKeys.S.isDown)
@@ -73,8 +77,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weapon.setPosition(this.x, this.y + 3).setRotation(this.aimAngle);
     this.weapon.setFlipY(Math.cos(this.aimAngle) < 0);
 
-    if (this.hp > 0 && this.stats.regeneration > 0 && this.hp < this.stats.maxHp) {
-      this.hp = Math.min(this.stats.maxHp, this.hp + this.stats.regeneration * (delta / 1000));
+    if (
+      this.hp > 0
+      && this.stats.regeneration > 0
+      && this.hp < this.stats.maxHp
+      && now >= this.regenerationBlockedUntil
+    ) {
+      const cappedRegeneration = Math.min(
+        this.stats.regeneration,
+        this.stats.maxHp * MAX_REGEN_PER_SECOND_RATIO,
+      );
+      this.hp = Math.min(this.stats.maxHp, this.hp + cappedRegeneration * (delta / 1000));
     }
   }
 
@@ -97,9 +110,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
-    const reducedDamage = Math.max(1, amount - this.stats.armor);
+    const minimumDamage = Math.max(1, amount * (1 - MAX_DAMAGE_REDUCTION_RATIO));
+    const reducedDamage = Math.max(minimumDamage, amount - this.stats.armor);
     this.hp = Math.max(0, this.hp - reducedDamage);
     this.invulnerableUntil = now + INVULNERABILITY_MS;
+    this.regenerationBlockedUntil = now + REGEN_DELAY_AFTER_HIT_MS;
 
     this.setTint(0xff334f);
     this.scene.time.delayedCall(120, () => {
@@ -127,6 +142,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
       },
     });
+  }
+
+  heal(amount: number): void {
+    if (amount > 0 && this.hp > 0) {
+      this.hp = Math.min(this.stats.maxHp, this.hp + amount);
+    }
+  }
+
+  revive(hpRatio: number, now: number): void {
+    this.hp = Math.max(1, this.stats.maxHp * Phaser.Math.Clamp(hpRatio, 0, 1));
+    this.regenerationBlockedUntil = now + REGEN_DELAY_AFTER_HIT_MS;
+    this.grantResumeProtection(now, 2_000);
   }
 
   applyStatModifier(modifier: StatModifier): void {

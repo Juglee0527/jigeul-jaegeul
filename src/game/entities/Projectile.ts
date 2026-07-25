@@ -12,6 +12,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   private readonly maxDistance: number;
   private traveledDistance = 0;
   private animationTime = 0;
+  private remainingPierces: number;
+  private readonly hitTargets = new Set<Phaser.GameObjects.GameObject>();
+  private readonly sizeMultiplier: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -21,6 +24,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     speed: number,
     damage: number,
     maxDistance: number,
+    pierce = 0,
+    sizeMultiplier = 1,
+    critical = false,
   ) {
     super(scene, x, y, 'projectile');
 
@@ -28,13 +34,18 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.direction = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
     this.travelSpeed = speed;
     this.maxDistance = maxDistance;
+    this.remainingPierces = pierce;
+    this.sizeMultiplier = sizeMultiplier;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     this.setRotation(angle);
     this.setDepth(12);
-    this.setScale(0.75, 1);
+    this.setScale(0.75 * sizeMultiplier, sizeMultiplier);
+    if (critical) {
+      this.setTint(0xfff36b);
+    }
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(24, 10, true);
@@ -53,7 +64,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.animationTime += delta;
 
     const streakPulse = 0.92 + Math.sin(this.animationTime * 0.035) * 0.1;
-    this.setScale(streakPulse, 1);
+    this.setScale(streakPulse * this.sizeMultiplier, this.sizeMultiplier);
     (this.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
 
     const outsideWorld = this.x < -WORLD_MARGIN
@@ -63,5 +74,18 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (outsideWorld || this.traveledDistance >= this.maxDistance) {
       this.destroy();
     }
+  }
+
+  registerHit(target: Phaser.GameObjects.GameObject): boolean {
+    if (this.hitTargets.has(target)) {
+      return false;
+    }
+    this.hitTargets.add(target);
+    if (this.remainingPierces > 0) {
+      this.remainingPierces -= 1;
+    } else {
+      this.destroy();
+    }
+    return true;
   }
 }
