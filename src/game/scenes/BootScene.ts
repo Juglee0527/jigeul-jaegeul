@@ -121,7 +121,13 @@ export class BootScene extends Phaser.Scene {
     const size = enemy.radius * 2;
     const g = this.make.graphics({ x: 0, y: 0 });
 
-    if (enemy.id === 'lol') {
+    if (enemy.id === 'middle-manager') {
+      this.drawDashBoss(g, size, enemy.color);
+    } else if (enemy.id === 'senior-manager') {
+      this.drawTeleportBoss(g, size, enemy.color);
+    } else if (enemy.id === 'final-boss') {
+      this.drawFinalBoss(g, size, enemy.color);
+    } else if (enemy.id === 'lol') {
       this.drawChatEnemy(g, size, enemy.color, true);
     } else if (enemy.id === 'okay' || enemy.archetype === 'wanderer') {
       this.drawChatEnemy(g, size, enemy.color, false);
@@ -215,5 +221,70 @@ export class BootScene extends Phaser.Scene {
     g.lineBetween(17, size * 0.65, size - 17, size * 0.65);
     g.lineStyle(3, 0xbba7ff, 1);
     g.strokeCircle(p, size * 0.65, 8);
+  }
+
+  private drawDashBoss(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+    const p = size / 2;
+    g.fillStyle(0x321707, 0.65);
+    g.fillEllipse(p, size - 7, size * 0.82, 13);
+    g.fillStyle(0x5a2c0b);
+    g.fillTriangle(3, p, size * 0.42, 6, size * 0.42, size - 6);
+    g.fillStyle(color);
+    g.fillTriangle(size - 3, p, size * 0.28, 8, size * 0.28, size - 8);
+    g.lineStyle(4, 0xffef9a, 1);
+    g.strokeTriangle(size - 3, p, size * 0.28, 8, size * 0.28, size - 8);
+    g.fillStyle(0x241104);
+    g.fillRoundedRect(size * 0.3, size * 0.29, size * 0.4, size * 0.42, 9);
+    g.fillStyle(0xffffff);
+    g.fillTriangle(size * 0.58, size * 0.38, size * 0.75, size * 0.43, size * 0.58, size * 0.48);
+    g.fillTriangle(size * 0.58, size * 0.54, size * 0.75, size * 0.59, size * 0.58, size * 0.64);
+    g.lineStyle(4, 0xff5c72, 1);
+    g.lineBetween(size * 0.35, size * 0.78, size * 0.68, size * 0.78);
+  }
+
+  private drawTeleportBoss(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+    const p = size / 2;
+    g.fillStyle(0x071f35, 0.7);
+    g.fillCircle(p, p, p - 5);
+    g.lineStyle(5, color, 0.95);
+    g.strokeCircle(p, p, p - 8);
+    g.lineStyle(3, 0xdff8ff, 0.85);
+    g.strokeCircle(p, p, p - 19);
+    g.fillStyle(color, 0.9);
+    g.fillTriangle(p, 6, size - 7, p, p, size - 6);
+    g.fillTriangle(p, 6, 7, p, p, size - 6);
+    g.fillStyle(0x09131f);
+    g.fillCircle(p, p, size * 0.2);
+    g.fillStyle(0xffffff);
+    g.fillCircle(p - 9, p - 3, 4);
+    g.fillCircle(p + 9, p - 3, 4);
+    g.lineStyle(3, color, 1);
+    g.lineBetween(p - 12, p + 13, p + 12, p + 13);
+  }
+
+  private drawFinalBoss(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+    const p = size / 2;
+    g.fillStyle(0x240b34, 0.72);
+    g.fillCircle(p, p, p - 4);
+    g.lineStyle(6, color, 1);
+    g.strokeCircle(p, p, p - 8);
+    g.lineStyle(2, 0xff9bea, 0.9);
+    g.strokeCircle(p, p, p - 20);
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      const x = p + Math.cos(angle) * (p - 8);
+      const y = p + Math.sin(angle) * (p - 8);
+      g.fillStyle(index % 2 === 0 ? 0xff4fd8 : 0x8f5bff);
+      g.fillCircle(x, y, 6);
+    }
+    g.fillStyle(color);
+    g.fillTriangle(p, 7, p - 22, p + 23, p + 22, p + 23);
+    g.fillStyle(0x100716);
+    g.fillRoundedRect(p - 26, p - 7, 52, 36, 11);
+    g.fillStyle(0xffffff);
+    g.fillCircle(p - 11, p + 4, 5);
+    g.fillCircle(p + 11, p + 4, 5);
+    g.lineStyle(4, 0xff5c72, 1);
+    g.strokeCircle(p, p + 19, 10);
   }
 }

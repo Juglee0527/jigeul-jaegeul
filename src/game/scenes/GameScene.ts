@@ -17,10 +17,13 @@ import type { GameDifficulty, GameSession, WaveConfig } from '../types/game';
 import { Hud } from '../ui/Hud';
 
 const MAX_EXPERIENCE_GEMS = 180;
-const debugBossIntervalMs = import.meta.env.DEV
+const debugBossIntervalMs = ['localhost', '127.0.0.1'].includes(window.location.hostname)
   ? Number(new URLSearchParams(window.location.search).get('bossIntervalMs'))
   : Number.NaN;
 const BOSS_DEBUG_ENABLED = Number.isFinite(debugBossIntervalMs) && debugBossIntervalMs >= 1_000;
+const debugBossStage = BOSS_DEBUG_ENABLED
+  ? Phaser.Math.Clamp(Number(new URLSearchParams(window.location.search).get('bossStage')) || 1, 1, 3)
+  : 1;
 const FIRST_BOSS_TIME_MS = BOSS_DEBUG_ENABLED
   ? debugBossIntervalMs
   : 3 * 60 * 1000;
@@ -60,11 +63,11 @@ export class GameScene extends Phaser.Scene {
   private secondBossSpawned = false;
   private finalBossSpawned = false;
   private activeBoss?: Enemy;
-  private nextBossAimedAt = 0;
-  private nextBossBurstAt = 0;
-  private nextBossReinforcementAt = 0;
+  private nextBossPrimaryAt = 0;
+  private nextBossSecondaryAt = 0;
+  private bossBusyUntil = 0;
   private bossBurstRotation = 0;
-  private bossEnraged = false;
+  private bossPatternRandom!: SeededRandom;
   private endAfterUpgrade = false;
 
   constructor() {
@@ -89,11 +92,10 @@ export class GameScene extends Phaser.Scene {
     this.secondBossSpawned = false;
     this.finalBossSpawned = false;
     this.activeBoss = undefined;
-    this.nextBossAimedAt = 0;
-    this.nextBossBurstAt = 0;
-    this.nextBossReinforcementAt = 0;
+    this.nextBossPrimaryAt = 0;
+    this.nextBossSecondaryAt = 0;
+    this.bossBusyUntil = 0;
     this.bossBurstRotation = 0;
-    this.bossEnraged = false;
     this.endAfterUpgrade = false;
     this.activePlayTimeMs = 0;
     this.combatTimeMs = 0;
@@ -118,6 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.upgradeSystem = new UpgradeSystem(
       new SeededRandom(`${this.session.seed}:upgrades`),
     );
+    this.bossPatternRandom = new SeededRandom(`${this.session.seed}:boss-patterns`);
     this.waveSystem = new WaveSystem();
     this.scoreSystem = new ScoreSystem(this.session);
     this.enemySpawner = new EnemySpawner(
@@ -191,7 +194,13 @@ export class GameScene extends Phaser.Scene {
     if (!this.firstBossSpawned && this.activePlayTimeMs >= FIRST_BOSS_TIME_MS) {
       this.firstBossSpawned = true;
       this.activePlayTimeMs = FIRST_BOSS_TIME_MS;
-      this.spawnBoss('middle-manager', '3분 · 1단계 보스!');
+      if (debugBossStage === 3) {
+        this.spawnBoss('final-boss', '10분 · 최종 보스!');
+      } else if (debugBossStage === 2) {
+        this.spawnBoss('senior-manager', '6분 · 2단계 보스!');
+      } else {
+        this.spawnBoss('middle-manager', '3분 · 1단계 보스!');
+      }
     }
     if (!this.secondBossSpawned && this.activePlayTimeMs >= SECOND_BOSS_TIME_MS) {
       this.secondBossSpawned = true;
@@ -207,12 +216,6 @@ export class GameScene extends Phaser.Scene {
       this.enemySpawner.spawn(this.currentWave);
       this.nextSpawnAt = this.activePlayTimeMs + this.currentWave.spawnInterval;
     }
-    if (this.activeBoss?.active && this.combatTimeMs >= this.nextBossReinforcementAt) {
-      const bossStage = this.getBossStage(this.activeBoss);
-      this.enemySpawner.spawn(this.currentWave, bossStage === 3 ? 2 : 1);
-      this.nextBossReinforcementAt = this.combatTimeMs + this.getBossReinforcementInterval(bossStage);
-    }
-
     this.enemies.getChildren().forEach((gameObject) => {
       const enemy = gameObject as Enemy;
       if (enemy.active) {
@@ -485,12 +488,10 @@ export class GameScene extends Phaser.Scene {
     this.projectiles.clear(true, true);
     this.bossProjectiles.clear(true, true);
     this.activeBoss = this.enemySpawner.spawnBoss(enemyId);
-    this.nextBossAimedAt = this.combatTimeMs + 1_500;
-    this.nextBossBurstAt = this.combatTimeMs + 4_000;
-    this.nextBossReinforcementAt = this.combatTimeMs
-      + this.getBossReinforcementInterval(this.getBossStage(this.activeBoss));
+    this.nextBossPrimaryAt = this.combatTimeMs + 1_300;
+    this.nextBossSecondaryAt = this.combatTimeMs + 3_400;
+    this.bossBusyUntil = 0;
     this.bossBurstRotation = 0;
-    this.bossEnraged = false;
     this.audio.play('boss');
     this.cameras.main.shake(500, 0.012);
     const text = this.add.text(GAME_WIDTH / 2, 180, announcement, {
@@ -515,38 +516,203 @@ export class GameScene extends Phaser.Scene {
     if (!boss?.active || this.gameEnded) {
       return;
     }
-
-    const bossStage = this.getBossStage(boss);
-    const enraged = boss.healthRatio <= 0.5;
-    if (enraged && !this.bossEnraged) {
-      this.bossEnraged = true;
-      this.showBossAnnouncement('보스 격노! 패턴 가속', '#ff5c72', 36);
-      this.cameras.main.shake(700, 0.014);
-    }
-    if (this.combatTimeMs >= this.nextBossAimedAt) {
-      const baseAimedInterval = bossStage === 3 ? 1_450 : bossStage === 2 ? 1_800 : 2_200;
-      const aimedInterval = enraged ? baseAimedInterval * 0.75 : baseAimedInterval;
-      this.nextBossAimedAt = this.combatTimeMs + aimedInterval;
-      this.telegraphBossAttack(boss, '조준 폭격', 0xff5c72, enraged ? 280 : 360, () => {
-        this.fireBossAimedVolley(
-          boss,
-          bossStage + 2 + (enraged ? 2 : 0),
-          10 + bossStage,
-        );
-      });
+    if (this.combatTimeMs < this.bossBusyUntil) {
+      return;
     }
 
-    if (this.combatTimeMs >= this.nextBossBurstAt) {
-      const baseBurstInterval = bossStage === 3 ? 3_800 : bossStage === 2 ? 4_600 : 5_400;
-      const burstInterval = enraged ? baseBurstInterval * 0.78 : baseBurstInterval;
-      this.nextBossBurstAt = this.combatTimeMs + burstInterval;
-      this.telegraphBossAttack(boss, '전체 공지', 0xffc43d, enraged ? 480 : 620, () => {
-        this.fireBossRadialBurst(
-          boss,
-          6 + bossStage * 4 + (enraged ? 4 : 0),
-        );
+    if (boss.enemyId === 'middle-manager') {
+      this.updateDashBoss(boss);
+    } else if (boss.enemyId === 'senior-manager') {
+      this.updateTeleportBoss(boss);
+    } else {
+      this.updateFinalBoss(boss);
+    }
+  }
+
+  private updateDashBoss(boss: Enemy): void {
+    if (this.combatTimeMs >= this.nextBossPrimaryAt) {
+      this.nextBossPrimaryAt = this.combatTimeMs + 4_800;
+      this.bossBusyUntil = this.combatTimeMs + 1_250;
+      this.telegraphBossDash(boss);
+      return;
+    }
+    if (this.combatTimeMs >= this.nextBossSecondaryAt) {
+      this.nextBossSecondaryAt = this.combatTimeMs + 6_200;
+      this.bossBusyUntil = this.combatTimeMs + 720;
+      boss.holdBossPosition(this.combatTimeMs + 650);
+      this.telegraphBossAttack(boss, '압박 면담', 0xffb13b, 650, () => {
+        this.fireBossAimedVolley(boss, 5, 9, 285);
       });
     }
+  }
+
+  private updateTeleportBoss(boss: Enemy): void {
+    if (this.combatTimeMs >= this.nextBossPrimaryAt) {
+      this.nextBossPrimaryAt = this.combatTimeMs + 4_500;
+      this.bossBusyUntil = this.combatTimeMs + 1_050;
+      this.teleportBossStrike(boss);
+      return;
+    }
+    if (this.combatTimeMs >= this.nextBossSecondaryAt) {
+      this.nextBossSecondaryAt = this.combatTimeMs + 6_100;
+      this.bossBusyUntil = this.combatTimeMs + 760;
+      boss.holdBossPosition(this.combatTimeMs + 700);
+      this.telegraphBossAttack(boss, '십자 보고', 0x57c7ff, 700, () => {
+        this.bossBurstRotation += Math.PI / 8;
+        this.fireBossRadialBurst(boss, 8, 220, 10, this.bossBurstRotation);
+      });
+    }
+  }
+
+  private updateFinalBoss(boss: Enemy): void {
+    if (this.combatTimeMs >= this.nextBossPrimaryAt) {
+      this.nextBossPrimaryAt = this.combatTimeMs + 3_900;
+      this.bossBusyUntil = this.combatTimeMs + 1_000;
+      boss.holdBossPosition(this.combatTimeMs + 700);
+      this.telegraphBossAttack(boss, '회전 결재선', 0xff4fd8, 700, () => {
+        this.fireBossSpiral(boss);
+      });
+      return;
+    }
+    if (this.combatTimeMs >= this.nextBossSecondaryAt) {
+      this.nextBossSecondaryAt = this.combatTimeMs + 5_700;
+      this.bossBusyUntil = this.combatTimeMs + 1_200;
+      this.telegraphDeadlineZone(boss);
+    }
+  }
+
+  private telegraphBossDash(boss: Enemy): void {
+    const targetX = this.player.x;
+    const targetY = this.player.y;
+    const angle = Phaser.Math.Angle.Between(boss.x, boss.y, targetX, targetY);
+    const distance = Phaser.Math.Distance.Between(boss.x, boss.y, targetX, targetY);
+    const warningLine = this.add.rectangle(
+      (boss.x + targetX) / 2,
+      (boss.y + targetY) / 2,
+      distance,
+      22,
+      0xffb13b,
+      0.2,
+    ).setRotation(angle).setStrokeStyle(3, 0xffef9a, 0.9).setDepth(16);
+    const warningText = this.add.text(boss.x, boss.y - 78, '직진 대시', {
+      color: '#ffef9a',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      stroke: '#150912',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(18);
+
+    boss.holdBossPosition(this.combatTimeMs + 700);
+    this.tweens.add({
+      targets: [warningLine, warningText],
+      alpha: { from: 0.3, to: 1 },
+      duration: 700,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        warningLine.destroy();
+        warningText.destroy();
+        if (!boss.active || this.gameEnded) {
+          return;
+        }
+        boss.dashBossToward(targetX, targetY, 720, this.combatTimeMs + 480);
+        this.cameras.main.shake(260, 0.012);
+        this.time.delayedCall(460, () => {
+          if (boss.active && !this.gameEnded) {
+            this.fireBossRadialBurst(boss, 8, 170, 8);
+          }
+        });
+      },
+    });
+  }
+
+  private teleportBossStrike(boss: Enemy): void {
+    const angle = this.bossPatternRandom.next() * Math.PI * 2;
+    const distance = 210 + this.bossPatternRandom.next() * 90;
+    const targetX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 100, GAME_WIDTH - 100);
+    const targetY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 130, GAME_HEIGHT - 90);
+    const departure = this.add.circle(boss.x, boss.y, 58, 0x57c7ff, 0.12)
+      .setStrokeStyle(5, 0x57c7ff, 0.95).setDepth(16);
+    const arrival = this.add.circle(targetX, targetY, 58, 0xdff8ff, 0.12)
+      .setStrokeStyle(5, 0xdff8ff, 0.95).setDepth(16);
+    const label = this.add.text(targetX, targetY - 76, '순간이동', {
+      color: '#dff8ff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      stroke: '#07131f',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(18);
+
+    boss.holdBossPosition(this.combatTimeMs + 720);
+    this.tweens.add({ targets: boss, alpha: 0.18, duration: 620, ease: 'Sine.easeIn' });
+    this.tweens.add({
+      targets: [departure, arrival, label],
+      scale: { from: 0.35, to: 1.25 },
+      alpha: { from: 0.25, to: 1 },
+      duration: 700,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        departure.destroy();
+        arrival.destroy();
+        label.destroy();
+        if (!boss.active || this.gameEnded) {
+          return;
+        }
+        boss.teleportBossTo(targetX, targetY);
+        boss.setAlpha(1);
+        this.cameras.main.flash(110, 87, 199, 255, false);
+        this.fireBossRadialBurst(boss, 12, 195, 9);
+        this.fireBossAimedVolley(boss, 3, 12, 300);
+      },
+    });
+  }
+
+  private fireBossSpiral(boss: Enemy): void {
+    for (let wave = 0; wave < 3; wave += 1) {
+      this.time.delayedCall(wave * 170, () => {
+        if (!boss.active || this.gameEnded) {
+          return;
+        }
+        this.bossBurstRotation += Math.PI / 9;
+        this.fireBossRadialBurst(boss, 9, 235, 11, this.bossBurstRotation);
+      });
+    }
+  }
+
+  private telegraphDeadlineZone(boss: Enemy): void {
+    const targetX = this.player.x;
+    const targetY = this.player.y;
+    const radius = 86;
+    const zone = this.add.circle(targetX, targetY, radius, 0xff304f, 0.12)
+      .setStrokeStyle(6, 0xff5c72, 0.95).setDepth(16).setScale(0.25);
+    const label = this.add.text(targetX, targetY, '마감 구역', {
+      color: '#ffffff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      stroke: '#310711',
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(18);
+    this.tweens.add({
+      targets: [zone, label],
+      scale: 1,
+      alpha: { from: 0.35, to: 1 },
+      duration: 1_050,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        zone.destroy();
+        label.destroy();
+        if (!boss.active || this.gameEnded) {
+          return;
+        }
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY) <= radius) {
+          this.damagePlayer(Math.round(16 * this.difficultyMultiplier));
+        }
+        this.fireBossRadialBurstAt(targetX, targetY, 12, 225, 10, this.bossBurstRotation);
+        this.cameras.main.shake(220, 0.012);
+      },
+    });
   }
 
   private telegraphBossAttack(
@@ -587,61 +753,86 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showBossAnnouncement(message: string, color: string, fontSize: number): void {
-    const text = this.add.text(GAME_WIDTH / 2, 180, message, {
-      color,
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: `${fontSize}px`,
-      fontStyle: 'bold',
-      stroke: '#2a0c10',
-      strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(60);
-    this.tweens.add({
-      targets: text,
-      alpha: 0,
-      y: 140,
-      duration: 1_500,
-      onComplete: () => text.destroy(),
-    });
-  }
-
-  private fireBossAimedVolley(boss: Enemy, count: number, damage: number): void {
+  private fireBossAimedVolley(
+    boss: Enemy,
+    count: number,
+    damage: number,
+    speed: number,
+  ): void {
     const baseAngle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
     const spread = Phaser.Math.DegToRad(13);
     for (let index = 0; index < count; index += 1) {
       const angle = baseAngle + (index - (count - 1) / 2) * spread;
-      const speed = boss.enemyId === 'final-boss' ? 300 : boss.enemyId === 'senior-manager' ? 275 : 250;
       this.spawnBossProjectile(boss, angle, speed, damage);
     }
   }
 
-  private fireBossRadialBurst(boss: Enemy, count: number): void {
-    const bossStage = this.getBossStage(boss);
-    this.bossBurstRotation += bossStage === 3 ? Math.PI / count : Math.PI / (count * 2);
+  private fireBossRadialBurst(
+    boss: Enemy,
+    count: number,
+    speed: number,
+    damage: number,
+    startAngle = 0,
+  ): void {
+    const muzzleDistance = boss.displayWidth * 0.45;
+    this.fireBossRadialBurstAt(
+      boss.x,
+      boss.y,
+      count,
+      speed,
+      damage,
+      startAngle,
+      muzzleDistance,
+    );
+  }
+
+  private fireBossRadialBurstAt(
+    x: number,
+    y: number,
+    count: number,
+    speed: number,
+    damage: number,
+    startAngle = 0,
+    muzzleDistance = 0,
+  ): void {
     for (let index = 0; index < count; index += 1) {
-      const angle = this.bossBurstRotation + (Math.PI * 2 * index) / count;
-      this.spawnBossProjectile(boss, angle, 175 + bossStage * 15, 7 + bossStage);
+      const angle = startAngle + (Math.PI * 2 * index) / count;
+      this.spawnBossProjectileAt(
+        x + Math.cos(angle) * muzzleDistance,
+        y + Math.sin(angle) * muzzleDistance,
+        angle,
+        speed,
+        damage,
+      );
     }
   }
 
   private spawnBossProjectile(boss: Enemy, angle: number, speed: number, damage: number): void {
     const muzzleDistance = boss.displayWidth * 0.45;
-    this.bossProjectiles.add(new BossProjectile(
-      this,
+    this.spawnBossProjectileAt(
       boss.x + Math.cos(angle) * muzzleDistance,
       boss.y + Math.sin(angle) * muzzleDistance,
       angle,
       speed,
+      damage,
+    );
+  }
+
+  private spawnBossProjectileAt(
+    x: number,
+    y: number,
+    angle: number,
+    speed: number,
+    damage: number,
+  ): void {
+    this.bossProjectiles.add(new BossProjectile(
+      this,
+      x,
+      y,
+      angle,
+      speed,
       Math.max(1, Math.round(damage * this.difficultyMultiplier)),
     ));
-  }
-
-  private getBossStage(boss: Enemy): number {
-    return boss.enemyId === 'final-boss' ? 3 : boss.enemyId === 'senior-manager' ? 2 : 1;
-  }
-
-  private getBossReinforcementInterval(bossStage: number): number {
-    return bossStage === 3 ? 3_500 : bossStage === 2 ? 4_500 : 5_500;
   }
 
   private dropTreasure(x: number, y: number, isFinal: boolean): void {

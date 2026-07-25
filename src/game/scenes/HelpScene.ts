@@ -210,9 +210,9 @@ export class HelpScene extends Phaser.Scene {
     this.add.rectangle(x + 55, lineY, width - 110, 3, 0x58344f, 1).setOrigin(0, 0.5);
     const stops = [
       { offset: 68, time: '0:00', title: '생존 시작', color: COLORS.player },
-      { offset: 270, time: '3:00', title: '1단계', color: 0xffb13b },
-      { offset: 472, time: '6:00', title: '2단계', color: 0xff6f91 },
-      { offset: 674, time: '10:00', title: '최종 보스', color: 0xff334f },
+      { offset: 270, time: '3:00', title: '대시형', color: 0xffb13b },
+      { offset: 472, time: '6:00', title: '순간이동형', color: 0x57c7ff },
+      { offset: 674, time: '10:00', title: '영역·회전형', color: 0xb45cff },
     ] as const;
     stops.forEach((stop, index) => {
       const stopX = x + stop.offset;
@@ -234,7 +234,7 @@ export class HelpScene extends Phaser.Scene {
       }).setOrigin(0.5);
     });
 
-    this.add.text(x + 24, y + 215, '보스전에는 시간이 멈추고 지원군이 합류합니다', {
+    this.add.text(x + 24, y + 215, '시간이 멈춥니다 · 공격 예고를 보고 피하세요', {
       color: '#aaa0b4',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',

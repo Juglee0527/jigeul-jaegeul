@@ -21,6 +21,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private nextChargeAt = 0;
   private charging = false;
   private readonly wanderPhase: number;
+  private bossMovementOverrideUntil = 0;
 
   get healthRatio(): number {
     return this.hp / this.maxHp;
@@ -71,7 +72,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       .setOrigin(0.5, 1)
       .setDepth(7);
 
-    this.healthBarWidth = Math.max(38, definition.radius * 2);
+    this.healthBarWidth = this.isBoss ? 260 : Math.max(38, definition.radius * 2);
     this.healthBarBackground = scene.add.rectangle(
       x - this.healthBarWidth / 2,
       y + definition.radius + 7,
@@ -105,8 +106,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.updateWanderer(time, globalSpeedMultiplier);
       return;
     }
+    if (this.isBoss) {
+      this.updateBossMovement(time, target, globalSpeedMultiplier);
+      return;
+    }
 
     this.moveToward(target, this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier);
+  }
+
+  holdBossPosition(until: number): void {
+    this.bossMovementOverrideUntil = Math.max(this.bossMovementOverrideUntil, until);
+    this.setVelocity(0, 0);
+  }
+
+  dashBossToward(x: number, y: number, speed: number, until: number): void {
+    this.bossMovementOverrideUntil = until;
+    const direction = new Phaser.Math.Vector2(x - this.x, y - this.y);
+    if (direction.lengthSq() > 0) {
+      direction.normalize().scale(speed);
+    }
+    this.setVelocity(direction.x, direction.y);
+    this.setRotation(direction.angle());
+  }
+
+  teleportBossTo(x: number, y: number): void {
+    this.setPosition(x, y);
+    (this.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
+    this.updateAttachedUi();
   }
 
   takeDamage(amount: number): boolean {
@@ -204,5 +230,51 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
     this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     this.setRotation(angle);
+  }
+
+  private updateBossMovement(
+    time: number,
+    target: Phaser.GameObjects.Components.Transform,
+    globalSpeedMultiplier: number,
+  ): void {
+    if (time < this.bossMovementOverrideUntil) {
+      return;
+    }
+
+    const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
+    if (this.enemyId === 'senior-manager') {
+      this.keepDistanceFrom(target, speed, 250);
+      this.setRotation(Math.sin(time * 0.002) * 0.08);
+      return;
+    }
+    if (this.enemyId === 'final-boss') {
+      const toTarget = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
+      const distance = Math.max(1, toTarget.length());
+      const radial = toTarget.clone().normalize().scale((distance - 285) * 0.5);
+      const tangent = new Phaser.Math.Vector2(-toTarget.y, toTarget.x).normalize().scale(speed);
+      this.setVelocity(
+        Phaser.Math.Clamp(radial.x + tangent.x, -speed * 1.35, speed * 1.35),
+        Phaser.Math.Clamp(radial.y + tangent.y, -speed * 1.35, speed * 1.35),
+      );
+      this.setRotation(time * 0.00035);
+      return;
+    }
+
+    this.moveToward(target, speed);
+  }
+
+  private keepDistanceFrom(
+    target: Phaser.GameObjects.Components.Transform,
+    speed: number,
+    preferredDistance: number,
+  ): void {
+    const direction = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
+    const distance = direction.length();
+    if (distance < 1) {
+      this.setVelocity(0, 0);
+      return;
+    }
+    direction.normalize().scale(distance < preferredDistance ? -speed : speed * 0.55);
+    this.setVelocity(direction.x, direction.y);
   }
 }
