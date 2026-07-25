@@ -9,6 +9,7 @@ export interface GameSession {
 }
 
 export interface GameResult {
+  score: number;
   survivalSeconds: number;
   killCount: number;
   level: number;
@@ -87,6 +88,7 @@ export interface EnemyDefinition {
   moveSpeed: number;
   contactDamage: number;
   experienceValue: number;
+  scoreLevel?: number;
   isBoss?: boolean;
   chargeSpeed?: number;
   chargeTriggerDistance?: number;

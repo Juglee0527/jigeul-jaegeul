@@ -251,7 +251,7 @@ export class GameScene extends Phaser.Scene {
       this.levelSystem.requiredExperience,
       survivalSeconds,
       this.scoreSystem.killCount,
-      this.scoreSystem.getCurrentScore(survivalSeconds, this.levelSystem.level),
+      this.scoreSystem.getCurrentScore(survivalSeconds),
       this.currentWave.name,
       this.player.stats,
     );
@@ -336,7 +336,8 @@ export class GameScene extends Phaser.Scene {
     this.audio.play('hit');
     if (enemy.takeDamage(damage)) {
       this.audio.play('kill');
-      this.scoreSystem.registerKill();
+      const scoreReward = this.scoreSystem.registerKill(enemy.scoreLevel);
+      this.hud.showScoreChange(scoreReward);
       if (enemy.isBoss) {
         this.scoreSystem.registerBossKill();
         this.activeBoss = undefined;
@@ -395,6 +396,10 @@ export class GameScene extends Phaser.Scene {
   private damagePlayer(amount: number): void {
     if (!this.player.takeDamage(amount, this.combatTimeMs)) {
       return;
+    }
+    const scorePenalty = this.scoreSystem.registerDamage(this.activePlayTimeMs / 1000);
+    if (scorePenalty > 0) {
+      this.hud.showScoreChange(-scorePenalty);
     }
     this.audio.play('hurt');
     this.cameras.main.shake(90, 0.006);

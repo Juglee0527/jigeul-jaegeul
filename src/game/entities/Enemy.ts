@@ -7,6 +7,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly experienceValue: number;
   readonly isBoss: boolean;
   readonly enemyId: string;
+  readonly scoreLevel: number;
 
   private readonly definition: EnemyDefinition;
   private readonly speedMultiplier: number;
@@ -45,6 +46,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.experienceValue = definition.experienceValue;
     this.isBoss = definition.isBoss ?? false;
     this.enemyId = definition.id;
+    this.scoreLevel = definition.scoreLevel ?? Math.max(1, Array.from(message.trim()).length);
     this.wanderPhase = ((x * 0.013) + (y * 0.017)) % (Math.PI * 2);
 
     scene.add.existing(this);

@@ -24,6 +24,7 @@ export class ResultScene extends Phaser.Scene {
   private buttonActions: Array<() => void> = [];
   private selectedIndex = 0;
   private result: GameResult = {
+    score: 0,
     survivalSeconds: 0,
     killCount: 0,
     level: 1,

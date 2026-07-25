@@ -88,6 +88,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 48,
     contactDamage: 28,
     experienceValue: 40,
+    scoreLevel: 8,
     isBoss: true,
   },
   {
@@ -101,6 +102,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 52,
     contactDamage: 32,
     experienceValue: 70,
+    scoreLevel: 12,
     isBoss: true,
   },
   {
@@ -114,6 +116,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 55,
     contactDamage: 36,
     experienceValue: 100,
+    scoreLevel: 18,
     isBoss: true,
   },
 ] as const;

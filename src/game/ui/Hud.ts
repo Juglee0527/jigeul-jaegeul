@@ -19,12 +19,16 @@ export class Hud {
   private readonly xpBar: Phaser.GameObjects.Rectangle;
   private readonly timerText: Phaser.GameObjects.Text;
   private readonly killText: Phaser.GameObjects.Text;
+  private readonly scorePlate: Phaser.GameObjects.Rectangle;
   private readonly scoreText: Phaser.GameObjects.Text;
   private readonly waveText: Phaser.GameObjects.Text;
   private readonly statsText: Phaser.GameObjects.Text;
   private currentStats?: PlayerStats;
+  private displayedScore = 0;
+  private scoreTarget = 0;
+  private scoreTween?: Phaser.Tweens.Tween;
 
-  constructor(scene: Phaser.Scene, difficulty: GameDifficulty) {
+  constructor(private readonly scene: Phaser.Scene, difficulty: GameDifficulty) {
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       color: '#a99eb8', fontFamily: 'system-ui, sans-serif', fontSize: '14px', fontStyle: 'bold',
     };
@@ -42,8 +46,13 @@ export class Hud {
       color: '#ffffff', fontFamily: 'system-ui, sans-serif', fontSize: '34px', fontStyle: 'bold', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(HUD_DEPTH + 1);
     this.killText = scene.add.text(GAME_WIDTH - 318, 21, '', labelStyle).setOrigin(1, 0).setDepth(HUD_DEPTH + 1);
-    this.scoreText = scene.add.text(GAME_WIDTH - 40, 19, '', {
-      ...labelStyle, color: '#fff36b', fontSize: '20px',
+    this.scorePlate = scene.add.rectangle(GAME_WIDTH - 174, 43, 270, 48, 0x201329, 0.95)
+      .setStrokeStyle(1, 0xfff36b, 0.48).setDepth(HUD_DEPTH + 1);
+    scene.add.text(GAME_WIDTH - 286, 26, 'SCORE', {
+      ...labelStyle, color: '#a99eb8', fontSize: '11px', letterSpacing: 1,
+    }).setDepth(HUD_DEPTH + 2);
+    this.scoreText = scene.add.text(GAME_WIDTH - 40, 22, '0', {
+      ...labelStyle, color: '#fff36b', fontSize: '25px',
     }).setOrigin(1, 0).setDepth(HUD_DEPTH + 1);
 
     this.levelText = scene.add.text(40, 80, '', {
@@ -110,7 +119,7 @@ export class Hud {
     this.xpBar.displayWidth = (GAME_WIDTH - 152) * xpRatio;
     this.timerText.setText(this.formatTime(survivalSeconds));
     this.killText.setText(`처치  ${killCount}`);
-    this.scoreText.setText(currentScore.toLocaleString('ko-KR'));
+    this.updateScore(currentScore);
     this.waveText.setText(waveName);
     this.refreshStatsText();
   }
@@ -120,6 +129,87 @@ export class Hud {
       return;
     }
     this.statsText.setText(getCompactStatLines(this.currentStats));
+  }
+
+  showScoreChange(amount: number): void {
+    if (amount === 0) {
+      return;
+    }
+
+    const increased = amount > 0;
+    const color = increased ? '#6dff8b' : '#ff5c72';
+    const changeText = this.scene.add.text(
+      GAME_WIDTH - 42,
+      63,
+      `${increased ? '+' : ''}${amount.toLocaleString('ko-KR')}`,
+      {
+        color,
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: increased ? '17px' : '19px',
+        fontStyle: 'bold',
+        stroke: '#0d0913',
+        strokeThickness: 4,
+      },
+    ).setOrigin(1, 0).setDepth(HUD_DEPTH + 5);
+
+    this.scene.tweens.killTweensOf([this.scoreText, this.scorePlate]);
+    this.scoreText.setColor(color).setScale(1).setAngle(0);
+    this.scorePlate.setStrokeStyle(2, increased ? 0x6dff8b : 0xff5c72, 1);
+    this.scene.tweens.add({
+      targets: this.scoreText,
+      scaleX: increased ? 1.18 : 1.12,
+      scaleY: increased ? 1.18 : 1.12,
+      angle: increased ? 0 : -3,
+      duration: 90,
+      yoyo: true,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.scoreText.setColor('#fff36b').setAngle(0);
+        this.scorePlate.setStrokeStyle(1, 0xfff36b, 0.48);
+      },
+    });
+    this.scene.tweens.add({
+      targets: this.scorePlate,
+      alpha: { from: 1, to: 0.72 },
+      scaleX: { from: 1.035, to: 1 },
+      scaleY: { from: 1.08, to: 1 },
+      duration: 260,
+      ease: 'Quad.easeOut',
+      onComplete: () => this.scorePlate.setAlpha(0.95),
+    });
+    this.scene.tweens.add({
+      targets: changeText,
+      y: 91,
+      alpha: 0,
+      scale: increased ? 1.12 : 0.92,
+      duration: 680,
+      ease: 'Quad.easeOut',
+      onComplete: () => changeText.destroy(),
+    });
+  }
+
+  private updateScore(currentScore: number): void {
+    if (currentScore === this.scoreTarget) {
+      return;
+    }
+
+    this.scoreTarget = currentScore;
+    this.scoreTween?.remove();
+    this.scoreTween = this.scene.tweens.addCounter({
+      from: this.displayedScore,
+      to: currentScore,
+      duration: Phaser.Math.Clamp(Math.abs(currentScore - this.displayedScore) * 2, 130, 420),
+      ease: 'Cubic.easeOut',
+      onUpdate: (tween) => {
+        this.displayedScore = Math.round(tween.getValue() ?? currentScore);
+        this.scoreText.setText(this.displayedScore.toLocaleString('ko-KR'));
+      },
+      onComplete: () => {
+        this.displayedScore = currentScore;
+        this.scoreText.setText(currentScore.toLocaleString('ko-KR'));
+        this.scoreTween = undefined;
+      },
+    });
   }
 
   private formatTime(totalSeconds: number): string {

@@ -97,6 +97,7 @@ interface GameSession {
 }
 
 interface GameResult {
+  score: number;
   survivalSeconds: number;
   killCount: number;
   bossKillCount: number;
