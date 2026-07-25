@@ -5,7 +5,7 @@ import { createRandomSeed } from '../services/SeededRandom';
 import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
 import { calculateFinalScore } from '../systems/ScoreSystem';
-import type { GameDifficulty, GameResult, GameSession } from '../types/game';
+import type { GameDifficulty, GameLength, GameResult, GameSession } from '../types/game';
 
 const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
   easy: '쉬움',
@@ -16,6 +16,10 @@ const DIFFICULTY_COLORS: Readonly<Record<GameDifficulty, string>> = {
   easy: '#6dff8b',
   normal: '#fff36b',
   hard: '#ff334f',
+};
+const GAME_LENGTH_LABELS: Readonly<Record<GameLength, string>> = {
+  standard: '기본 10분',
+  quick: '퀵 5분',
 };
 
 export class ResultScene extends Phaser.Scene {
@@ -31,6 +35,7 @@ export class ResultScene extends Phaser.Scene {
     bossKillCount: 0,
     mode: 'normal',
     difficulty: 'normal',
+    gameLength: 'standard',
     seed: 'unknown',
   };
 
@@ -53,19 +58,26 @@ export class ResultScene extends Phaser.Scene {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.background);
 
     this.add
-      .text(GAME_WIDTH / 2, 72, this.result.victory ? '10분 생존 성공!' : '긁혔습니다.', {
+      .text(
+        GAME_WIDTH / 2,
+        72,
+        this.result.victory
+          ? `${this.result.gameLength === 'quick' ? '5분' : '10분'} 생존 성공!`
+          : '긁혔습니다.',
+        {
         color: this.result.victory ? '#ffc43d' : '#ff5c72',
         fontFamily: 'system-ui, sans-serif',
         fontSize: '68px',
         fontStyle: 'bold',
-      })
+        },
+      )
       .setOrigin(0.5);
 
     this.add
       .text(
         GAME_WIDTH / 2,
         135,
-        `${this.result.mode === 'daily' ? '오늘의 도전' : '일반 플레이'} · ${DIFFICULTY_LABELS[this.result.difficulty]}`,
+        `${this.result.mode === 'daily' ? '오늘의 도전' : '일반 플레이'} · ${GAME_LENGTH_LABELS[this.result.gameLength]} · ${DIFFICULTY_LABELS[this.result.difficulty]}`,
         {
           color: DIFFICULTY_COLORS[this.result.difficulty],
           fontFamily: 'system-ui, sans-serif',
@@ -233,6 +245,7 @@ export class ResultScene extends Phaser.Scene {
       return {
         mode: 'normal',
         difficulty: this.result.difficulty,
+        gameLength: this.result.gameLength,
         seed: createRandomSeed(),
       };
     }
@@ -240,6 +253,7 @@ export class ResultScene extends Phaser.Scene {
     return {
       mode: 'daily',
       difficulty: this.result.difficulty,
+      gameLength: this.result.gameLength,
       seed: this.result.seed,
       ...(this.result.dailyDate ? { dailyDate: this.result.dailyDate } : {}),
     };

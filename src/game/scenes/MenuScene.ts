@@ -4,7 +4,7 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { createRandomSeed, getLocalDateSeed } from '../services/SeededRandom';
 import { AudioManager } from '../services/AudioManager';
 import { StorageService } from '../services/StorageService';
-import type { GameDifficulty, GameSession } from '../types/game';
+import type { GameDifficulty, GameLength, GameSession } from '../types/game';
 
 const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
   easy: '쉬움',
@@ -13,6 +13,11 @@ const DIFFICULTY_LABELS: Readonly<Record<GameDifficulty, string>> = {
 };
 
 const DIFFICULTIES: readonly GameDifficulty[] = ['easy', 'normal', 'hard'];
+const GAME_LENGTHS: readonly GameLength[] = ['standard', 'quick'];
+const GAME_LENGTH_LABELS: Readonly<Record<GameLength, string>> = {
+  standard: '기본 10분',
+  quick: '퀵 5분',
+};
 const DIFFICULTY_COLORS: Readonly<Record<GameDifficulty, { dim: string; bright: string; stroke: number }>> = {
   easy: { dim: '#74c991', bright: '#6dff8b', stroke: 0x6dff8b },
   normal: { dim: '#d6c76e', bright: '#fff36b', stroke: 0xfff36b },
@@ -25,8 +30,11 @@ export class MenuScene extends Phaser.Scene {
   private menuActions: Array<() => void> = [];
   private selectedIndex = 0;
   private selectedDifficulty: GameDifficulty = 'normal';
+  private selectedGameLength: GameLength = 'standard';
   private difficultyButtons: Phaser.GameObjects.Rectangle[] = [];
   private difficultyTexts: Phaser.GameObjects.Text[] = [];
+  private gameLengthButtons: Phaser.GameObjects.Rectangle[] = [];
+  private gameLengthTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('MenuScene');
@@ -38,8 +46,11 @@ export class MenuScene extends Phaser.Scene {
     this.menuActions = [];
     this.selectedIndex = 0;
     this.selectedDifficulty = 'normal';
+    this.selectedGameLength = 'standard';
     this.difficultyButtons = [];
     this.difficultyTexts = [];
+    this.gameLengthButtons = [];
+    this.gameLengthTexts = [];
     const records = new StorageService().load();
     const today = getLocalDateSeed();
     const todayRecord = records.dailyRecords[today];
@@ -49,7 +60,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.circle(1120, 86, 260, COLORS.secondary, 0.07);
     this.add.circle(105, 680, 230, COLORS.primary, 0.05);
 
-    this.add.text(68, 58, '10분 보스 생존 로그라이크', {
+    this.add.text(68, 58, '5분 또는 10분 보스 생존 로그라이크', {
       color: '#ff9bea',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '17px',
@@ -72,18 +83,30 @@ export class MenuScene extends Phaser.Scene {
       lineSpacing: 9,
     });
 
-    this.createModeCard(700, 98, '일반 생존', '3단계 보스와 매 판 새로운 능력 조합', 'PLAY', true, () => {
-      this.startGame({ mode: 'normal', difficulty: this.selectedDifficulty, seed: createRandomSeed() });
+    this.createModeCard(700, 98, '일반 생존', '선택한 시간과 매 판 새로운 능력 조합', 'PLAY', true, () => {
+      this.startGame({
+        mode: 'normal',
+        difficulty: this.selectedDifficulty,
+        gameLength: this.selectedGameLength,
+        seed: createRandomSeed(),
+      });
     });
     this.createModeCard(700, 272, '오늘의 도전', `${today} · 똑같은 패턴`, 'DAILY', false, () => {
-      this.startGame({ mode: 'daily', difficulty: this.selectedDifficulty, seed: today, dailyDate: today });
+      this.startGame({
+        mode: 'daily',
+        difficulty: this.selectedDifficulty,
+        gameLength: this.selectedGameLength,
+        seed: today,
+        dailyDate: today,
+      });
     }, todayRecord ? `오늘 최고  ${todayRecord.score.toLocaleString('ko-KR')}` : '첫 기록을 남겨보세요');
 
-    this.createSmallButton(700, 462, '게임 방법  →', () => {
+    this.createSmallButton(700, 440, '게임 방법  →', () => {
       this.audio.setMood('paused');
       this.scene.launch('HelpScene');
       this.scene.pause();
     });
+    this.createGameLengthSelector();
     this.createDifficultySelector();
     this.renderSelection();
 
@@ -99,7 +122,7 @@ export class MenuScene extends Phaser.Scene {
     this.createStat(68, 515, '최대 처치', records.maxKills.toString());
     this.createStat(270, 515, '클리어 목표', '최종 보스 격파');
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 26, '↑ ↓ 메뉴 선택  ·  ← → 난이도  ·  ENTER 선택', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 20, '↑ ↓ 메뉴 선택  ·  ← → 난이도  ·  Q 게임 시간  ·  ENTER 선택', {
       color: '#6f6578',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
@@ -111,12 +134,14 @@ export class MenuScene extends Phaser.Scene {
     keyboard?.on('keydown-ENTER', this.activateSelection, this);
     keyboard?.on('keydown-LEFT', this.selectPreviousDifficulty, this);
     keyboard?.on('keydown-RIGHT', this.selectNextDifficulty, this);
+    keyboard?.on('keydown-Q', this.toggleGameLength, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       keyboard?.off('keydown-UP', this.selectPrevious, this);
       keyboard?.off('keydown-DOWN', this.selectNext, this);
       keyboard?.off('keydown-ENTER', this.activateSelection, this);
       keyboard?.off('keydown-LEFT', this.selectPreviousDifficulty, this);
       keyboard?.off('keydown-RIGHT', this.selectNextDifficulty, this);
+      keyboard?.off('keydown-Q', this.toggleGameLength, this);
     });
   }
 
@@ -200,7 +225,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private createDifficultySelector(): void {
-    this.add.text(700, 544, '난이도 선택', {
+    this.add.text(700, 604, '난이도 선택', {
       color: '#8f7ca3',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '14px',
@@ -210,11 +235,11 @@ export class MenuScene extends Phaser.Scene {
 
     DIFFICULTIES.forEach((difficulty, index) => {
       const x = 700 + index * 170;
-      const button = this.add.rectangle(x, 572, 158, 54, 0x15101d, 0.98)
+      const button = this.add.rectangle(x, 626, 158, 44, 0x15101d, 0.98)
         .setOrigin(0)
         .setInteractive({ useHandCursor: true });
       this.difficultyButtons.push(button);
-      const label = this.add.text(x + 79, 599, DIFFICULTY_LABELS[difficulty], {
+      const label = this.add.text(x + 79, 648, DIFFICULTY_LABELS[difficulty], {
         color: DIFFICULTY_COLORS[difficulty].dim,
         fontFamily: 'system-ui, sans-serif',
         fontSize: '17px',
@@ -230,6 +255,60 @@ export class MenuScene extends Phaser.Scene {
       button.on('pointerout', () => this.renderDifficulty());
     });
     this.renderDifficulty();
+  }
+
+  private createGameLengthSelector(): void {
+    this.add.text(700, 520, '게임 시간 선택', {
+      color: '#8f7ca3',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      letterSpacing: 1,
+    });
+    GAME_LENGTHS.forEach((gameLength, index) => {
+      const x = 700 + index * 255;
+      const button = this.add.rectangle(x, 542, 242, 46, 0x15101d, 0.98)
+        .setOrigin(0)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add.text(x + 121, 565, GAME_LENGTH_LABELS[gameLength], {
+        color: '#c7b5da',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '17px',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+      this.gameLengthButtons.push(button);
+      this.gameLengthTexts.push(label);
+      button.on('pointerdown', () => this.setGameLength(gameLength));
+      button.on('pointerover', () => {
+        if (this.selectedGameLength !== gameLength) {
+          button.setFillStyle(0x291b35);
+        }
+      });
+      button.on('pointerout', () => this.renderGameLength());
+    });
+    this.renderGameLength();
+  }
+
+  private toggleGameLength(): void {
+    const index = GAME_LENGTHS.indexOf(this.selectedGameLength);
+    this.setGameLength(GAME_LENGTHS[(index + 1) % GAME_LENGTHS.length]);
+  }
+
+  private setGameLength(gameLength: GameLength): void {
+    this.selectedGameLength = gameLength;
+    this.audio.unlock();
+    this.audio.play('confirm');
+    this.renderGameLength();
+  }
+
+  private renderGameLength(): void {
+    this.gameLengthButtons.forEach((button, index) => {
+      const selected = GAME_LENGTHS[index] === this.selectedGameLength;
+      button.setFillStyle(selected ? 0x35214b : 0x15101d);
+      button.setStrokeStyle(selected ? 3 : 1, selected ? COLORS.primary : 0x604579, selected ? 1 : 0.75);
+      button.setScale(selected ? 1.02 : 1);
+      this.gameLengthTexts[index]?.setColor(selected ? '#ffb4ed' : '#c7b5da');
+    });
   }
 
   private selectPreviousDifficulty(): void {

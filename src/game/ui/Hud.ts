@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
-import type { GameDifficulty, PlayerStats } from '../types/game';
+import type { GameDifficulty, GameLength, PlayerStats } from '../types/game';
 import { getCompactStatLines } from './statFormatting';
 
 const HUD_DEPTH = 50;
@@ -28,7 +28,11 @@ export class Hud {
   private scoreTarget = 0;
   private scoreTween?: Phaser.Tweens.Tween;
 
-  constructor(private readonly scene: Phaser.Scene, difficulty: GameDifficulty) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    difficulty: GameDifficulty,
+    gameLength: GameLength,
+  ) {
     const labelStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       color: '#a99eb8', fontFamily: 'system-ui, sans-serif', fontSize: '14px', fontStyle: 'bold',
     };
@@ -85,6 +89,14 @@ export class Hud {
     }).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
     scene.add.text(230, GAME_HEIGHT - 24, `난이도  ${DIFFICULTY_LABELS[difficulty]}`, {
       color: difficulty === 'easy' ? '#6dff8b' : difficulty === 'hard' ? '#ff6f91' : '#fff36b',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      backgroundColor: '#171022',
+      padding: { x: 9, y: 4 },
+    }).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1);
+    scene.add.text(350, GAME_HEIGHT - 24, gameLength === 'quick' ? '퀵 5분' : '기본 10분', {
+      color: gameLength === 'quick' ? '#76e7ff' : '#d8c9ff',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '14px',
       fontStyle: 'bold',

@@ -30,11 +30,6 @@ const BOSS_DEBUG_ENABLED = Number.isFinite(debugBossIntervalMs) && debugBossInte
 const debugBossStage = BOSS_DEBUG_ENABLED
   ? Phaser.Math.Clamp(Number(new URLSearchParams(window.location.search).get('bossStage')) || 1, 1, 3)
   : 1;
-const FIRST_BOSS_TIME_MS = BOSS_DEBUG_ENABLED
-  ? debugBossIntervalMs
-  : 3 * 60 * 1000;
-const SECOND_BOSS_TIME_MS = BOSS_DEBUG_ENABLED ? debugBossIntervalMs * 2 : 6 * 60 * 1000;
-const GAME_DURATION_MS = BOSS_DEBUG_ENABLED ? debugBossIntervalMs * 3 : 10 * 60 * 1000;
 const DIFFICULTY_MULTIPLIERS: Readonly<Record<GameDifficulty, number>> = {
   easy: 0.5,
   normal: 1,
@@ -79,6 +74,9 @@ export class GameScene extends Phaser.Scene {
   private currentWave!: WaveConfig;
   private session!: GameSession;
   private difficultyMultiplier = 1;
+  private firstBossTimeMs = 3 * 60 * 1000;
+  private secondBossTimeMs: number | undefined = 6 * 60 * 1000;
+  private gameDurationMs = 10 * 60 * 1000;
   private activePlayTimeMs = 0;
   private combatTimeMs = 0;
   private nextAttackAt = 0;
@@ -105,12 +103,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data?: { session?: GameSession }): void {
-    this.session = data?.session ?? {
-      mode: 'normal',
-      difficulty: 'normal',
-      seed: createRandomSeed(),
-    };
+    const incomingSession = data?.session;
+    this.session = incomingSession
+      ? { ...incomingSession, gameLength: incomingSession.gameLength ?? 'standard' }
+      : {
+        mode: 'normal',
+        difficulty: 'normal',
+        gameLength: 'standard',
+        seed: createRandomSeed(),
+      };
     this.difficultyMultiplier = DIFFICULTY_MULTIPLIERS[this.session.difficulty];
+    const quick = this.session.gameLength === 'quick';
+    this.firstBossTimeMs = BOSS_DEBUG_ENABLED ? debugBossIntervalMs : (quick ? 2 : 3) * 60 * 1000;
+    this.secondBossTimeMs = quick
+      ? undefined
+      : (BOSS_DEBUG_ENABLED ? debugBossIntervalMs * 2 : 6 * 60 * 1000);
+    this.gameDurationMs = BOSS_DEBUG_ENABLED
+      ? debugBossIntervalMs * (quick ? 2 : 3)
+      : (quick ? 5 : 10) * 60 * 1000;
   }
 
   create(): void {
@@ -164,7 +174,7 @@ export class GameScene extends Phaser.Scene {
       this.difficultyMultiplier,
     );
     this.currentWave = this.waveSystem.getCurrentWave(0);
-    this.hud = new Hud(this, this.session.difficulty);
+    this.hud = new Hud(this, this.session.difficulty, this.session.gameLength);
 
     this.physics.add.overlap(
       this.projectiles,
@@ -219,31 +229,35 @@ export class GameScene extends Phaser.Scene {
     // 적 행동에는 계속 흐르는 별도의 전투 시계를 사용한다.
     this.combatTimeMs += delta;
     if (!this.activeBoss?.active) {
-      this.activePlayTimeMs = Math.min(GAME_DURATION_MS, this.activePlayTimeMs + delta);
+      this.activePlayTimeMs = Math.min(this.gameDurationMs, this.activePlayTimeMs + delta);
     }
     this.player.update(delta, this.combatTimeMs);
     const survivalSeconds = this.activePlayTimeMs / 1000;
     this.currentWave = this.waveSystem.getCurrentWave(survivalSeconds);
 
-    if (!this.firstBossSpawned && this.activePlayTimeMs >= FIRST_BOSS_TIME_MS) {
+    if (!this.firstBossSpawned && this.activePlayTimeMs >= this.firstBossTimeMs) {
       this.firstBossSpawned = true;
-      this.activePlayTimeMs = FIRST_BOSS_TIME_MS;
+      this.activePlayTimeMs = this.firstBossTimeMs;
       if (debugBossStage === 3) {
-        this.spawnBoss('final-boss', '10분 · 최종 보스!');
+        this.spawnBoss('final-boss', `${this.formatGameMinute(this.firstBossTimeMs)} · 최종 보스!`);
       } else if (debugBossStage === 2) {
-        this.spawnBoss('senior-manager', '6분 · 2단계 보스!');
+        this.spawnBoss('senior-manager', `${this.formatGameMinute(this.firstBossTimeMs)} · 2단계 보스!`);
       } else {
-        this.spawnBoss('middle-manager', '3분 · 1단계 보스!');
+        this.spawnBoss('middle-manager', `${this.formatGameMinute(this.firstBossTimeMs)} · 1단계 보스!`);
       }
     }
-    if (!this.secondBossSpawned && this.activePlayTimeMs >= SECOND_BOSS_TIME_MS) {
+    if (
+      this.secondBossTimeMs !== undefined
+      && !this.secondBossSpawned
+      && this.activePlayTimeMs >= this.secondBossTimeMs
+    ) {
       this.secondBossSpawned = true;
-      this.activePlayTimeMs = SECOND_BOSS_TIME_MS;
-      this.spawnBoss('senior-manager', '6분 · 2단계 보스!');
+      this.activePlayTimeMs = this.secondBossTimeMs;
+      this.spawnBoss('senior-manager', `${this.formatGameMinute(this.secondBossTimeMs)} · 2단계 보스!`);
     }
-    if (!this.finalBossSpawned && this.activePlayTimeMs >= GAME_DURATION_MS) {
+    if (!this.finalBossSpawned && this.activePlayTimeMs >= this.gameDurationMs) {
       this.finalBossSpawned = true;
-      this.spawnBoss('final-boss', '최종 보스 등장!');
+      this.spawnBoss('final-boss', `${this.formatGameMinute(this.gameDurationMs)} · 최종 보스 등장!`);
     }
 
     if (!this.activeBoss?.active && this.activePlayTimeMs >= this.nextSpawnAt && !this.finalBossSpawned) {
@@ -568,7 +582,7 @@ export class GameScene extends Phaser.Scene {
     this.choosingUpgrade = false;
     if (this.endAfterUpgrade) {
       this.endAfterUpgrade = false;
-      this.endGame(600, true);
+      this.endGame(this.gameDurationMs / 1000, true);
     }
   }
 
@@ -681,7 +695,7 @@ export class GameScene extends Phaser.Scene {
     const choices = this.upgradeSystem.getLegendaryChoices();
     if (choices.length === 0) {
       if (isFinal) {
-        this.endGame(600, true);
+        this.endGame(this.gameDurationMs / 1000, true);
       }
       return;
     }
@@ -1071,9 +1085,18 @@ export class GameScene extends Phaser.Scene {
 
   createRestartSession(): GameSession {
     if (this.session.mode === 'normal') {
-      return { mode: 'normal', difficulty: this.session.difficulty, seed: createRandomSeed() };
+      return {
+        mode: 'normal',
+        difficulty: this.session.difficulty,
+        gameLength: this.session.gameLength,
+        seed: createRandomSeed(),
+      };
     }
     return { ...this.session };
+  }
+
+  private formatGameMinute(timeMs: number): string {
+    return `${Math.round(timeMs / 60_000)}분`;
   }
 
   private pauseGame(): void {

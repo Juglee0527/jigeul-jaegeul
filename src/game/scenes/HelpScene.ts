@@ -199,7 +199,7 @@ export class HelpScene extends Phaser.Scene {
       fontStyle: 'bold',
       letterSpacing: 2,
     });
-    this.add.text(x + 24, y + 46, '세 번의 관문을 넘으세요', {
+    this.add.text(x + 24, y + 46, '기본 10분 · 세 번의 관문', {
       color: '#ffffff',
       fontFamily: 'system-ui, sans-serif',
       fontSize: '24px',
@@ -234,15 +234,21 @@ export class HelpScene extends Phaser.Scene {
       }).setOrigin(0.5);
     });
 
-    this.add.text(x + 24, y + 215, '시간이 멈춥니다 · 공격 예고를 보고 피하세요', {
+    this.add.text(x + 24, y + 205, '퀵 5분: 2:00 대시형 → 5:00 최종 보스', {
+      color: '#76e7ff',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '15px',
+      fontStyle: 'bold',
+    });
+    this.add.text(x + 24, y + 230, '보스전에는 시간이 멈춥니다', {
       color: '#aaa0b4',
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '15px',
+      fontSize: '14px',
     });
-    this.add.text(x + width - 24, y + 215, '처치 보상  ◆ 전설 능력', {
+    this.add.text(x + width - 24, y + 230, '처치 보상  ◆ 전설 능력', {
       color: '#ffc43d',
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '15px',
+      fontSize: '14px',
       fontStyle: 'bold',
     }).setOrigin(1, 0);
   }
