@@ -96,7 +96,6 @@ export class GameScene extends Phaser.Scene {
   private combatEffects = createCombatEffects();
   private nextNovaAt = Number.POSITIVE_INFINITY;
   private shieldReadyAt = 0;
-  private endAfterUpgrade = false;
 
   constructor() {
     super('GameScene');
@@ -139,7 +138,6 @@ export class GameScene extends Phaser.Scene {
     this.combatEffects = createCombatEffects();
     this.nextNovaAt = Number.POSITIVE_INFINITY;
     this.shieldReadyAt = 0;
-    this.endAfterUpgrade = false;
     this.activePlayTimeMs = 0;
     this.combatTimeMs = 0;
     this.nextAttackAt = 0;
@@ -172,6 +170,7 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       new SeededRandom(`${this.session.seed}:enemies`),
       this.difficultyMultiplier,
+      this.session.difficulty,
     );
     this.currentWave = this.waveSystem.getCurrentWave(0);
     this.hud = new Hud(this, this.session.difficulty, this.session.gameLength);
@@ -444,7 +443,11 @@ export class GameScene extends Phaser.Scene {
       this.scoreSystem.registerBossKill();
       this.activeBoss = undefined;
       this.bossProjectiles.clear(true, true);
-      this.dropTreasure(dropX, dropY, enemyId === 'final-boss');
+      if (enemyId === 'final-boss') {
+        this.endGame(this.gameDurationMs / 1000, true);
+      } else {
+        this.dropTreasure(dropX, dropY);
+      }
       return true;
     }
 
@@ -580,10 +583,6 @@ export class GameScene extends Phaser.Scene {
     this.audio.play('confirm');
     this.audio.setMood('game');
     this.choosingUpgrade = false;
-    if (this.endAfterUpgrade) {
-      this.endAfterUpgrade = false;
-      this.endGame(this.gameDurationMs / 1000, true);
-    }
   }
 
   private applyCombatEffect(effect: UpgradeEffect): void {
@@ -690,16 +689,11 @@ export class GameScene extends Phaser.Scene {
     if (!chest.active || this.choosingUpgrade) {
       return;
     }
-    const isFinal = chest.getData('final') === true;
     chest.destroy();
     const choices = this.upgradeSystem.getLegendaryChoices();
     if (choices.length === 0) {
-      if (isFinal) {
-        this.endGame(this.gameDurationMs / 1000, true);
-      }
       return;
     }
-    this.endAfterUpgrade = isFinal;
     this.openUpgradeChoices(choices);
   }
 
@@ -1070,8 +1064,8 @@ export class GameScene extends Phaser.Scene {
     ));
   }
 
-  private dropTreasure(x: number, y: number, isFinal: boolean): void {
-    const chest = this.physics.add.sprite(x, y, 'treasure').setDepth(18).setData('final', isFinal);
+  private dropTreasure(x: number, y: number): void {
+    const chest = this.physics.add.sprite(x, y, 'treasure').setDepth(18);
     this.treasureChests.add(chest);
     this.tweens.add({
       targets: chest,

@@ -106,6 +106,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.updateWanderer(time, globalSpeedMultiplier);
       return;
     }
+    if (this.definition.archetype === 'flee') {
+      this.updateFleeing(time, target, globalSpeedMultiplier);
+      return;
+    }
+    if (this.definition.archetype === 'orbiter') {
+      this.updateOrbiter(time, target, globalSpeedMultiplier);
+      return;
+    }
     if (this.isBoss) {
       this.updateBossMovement(time, target, globalSpeedMultiplier);
       return;
@@ -230,6 +238,46 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
     this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     this.setRotation(angle);
+  }
+
+  private updateFleeing(
+    time: number,
+    target: Phaser.GameObjects.Components.Transform,
+    globalSpeedMultiplier: number,
+  ): void {
+    const away = new Phaser.Math.Vector2(this.x - target.x, this.y - target.y);
+    const distance = Math.max(1, away.length());
+    const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
+    if (distance < 390) {
+      away.normalize();
+      const tangent = new Phaser.Math.Vector2(-away.y, away.x)
+        .scale(Math.sin(time * 0.004 + this.wanderPhase) * speed * 0.42);
+      away.scale(speed).add(tangent);
+      this.setVelocity(away.x, away.y);
+      this.setFlipX(away.x < 0);
+      return;
+    }
+    const angle = this.wanderPhase + time * 0.0008;
+    this.setVelocity(Math.cos(angle) * speed * 0.45, Math.sin(angle) * speed * 0.45);
+  }
+
+  private updateOrbiter(
+    time: number,
+    target: Phaser.GameObjects.Components.Transform,
+    globalSpeedMultiplier: number,
+  ): void {
+    const toTarget = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y);
+    const distance = Math.max(1, toTarget.length());
+    const speed = this.definition.moveSpeed * this.speedMultiplier * globalSpeedMultiplier;
+    const radial = toTarget.clone().normalize().scale((distance - 240) * 0.75);
+    const orbitDirection = Math.sin(this.wanderPhase) >= 0 ? 1 : -1;
+    const tangent = new Phaser.Math.Vector2(-toTarget.y, toTarget.x)
+      .normalize()
+      .scale(speed * orbitDirection);
+    const velocity = radial.add(tangent);
+    velocity.limit(speed * 1.35);
+    this.setVelocity(velocity.x, velocity.y);
+    this.setRotation(time * 0.0015 * orbitDirection);
   }
 
   private updateBossMovement(

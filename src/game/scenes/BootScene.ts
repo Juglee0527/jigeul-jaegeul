@@ -132,7 +132,11 @@ export class BootScene extends Phaser.Scene {
     } else if (enemy.id === 'okay' || enemy.archetype === 'wanderer') {
       this.drawChatEnemy(g, size, enemy.color, false);
     } else if (enemy.id === 'five-minutes') {
-      this.drawAlarmEnemy(g, size, enemy.color);
+      this.drawNotificationEnemy(g, size, enemy.color);
+    } else if (enemy.archetype === 'flee') {
+      this.drawFleeEnemy(g, size, enemy.color);
+    } else if (enemy.archetype === 'orbiter') {
+      this.drawOrbitEnemy(g, size, enemy.color);
     } else if (enemy.archetype === 'charger') {
       this.drawRocketEnemy(g, size, enemy.color);
     } else {
@@ -167,22 +171,39 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  private drawAlarmEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+  private drawNotificationEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
     const p = size / 2;
     g.fillStyle(0x2a1024, 0.6);
     g.fillEllipse(p, size - 4, size * 0.75, 9);
+    g.fillStyle(0x7a235e);
+    g.fillTriangle(6, 15, 13, 2, 20, 14);
+    g.fillTriangle(size - 20, 14, size - 13, 2, size - 6, 15);
     g.fillStyle(color);
-    g.fillCircle(p, p + 3, p - 7);
-    g.fillTriangle(7, 13, 13, 2, 20, 13);
-    g.fillTriangle(size - 20, 13, size - 13, 2, size - 7, 13);
-    g.lineStyle(3, 0xffffff, 0.82);
-    g.strokeCircle(p, p + 3, p - 7);
-    g.lineStyle(3, 0x351124, 1);
-    g.lineBetween(p, p + 3, p, p - 8);
-    g.lineBetween(p, p + 3, p + 9, p + 8);
-    g.lineStyle(3, color, 1);
-    g.lineBetween(14, size - 8, 9, size - 2);
-    g.lineBetween(size - 14, size - 8, size - 9, size - 2);
+    g.fillRoundedRect(4, 10, size - 8, size - 17, 9);
+    g.fillTriangle(size * 0.62, size - 10, size * 0.82, size - 2, size * 0.76, size - 15);
+    g.lineStyle(3, 0xffffff, 0.88);
+    g.strokeRoundedRect(4, 10, size - 8, size - 17, 9);
+
+    g.fillStyle(0x32101f);
+    g.fillTriangle(size * 0.2, size * 0.4, size * 0.42, size * 0.46, size * 0.4, size * 0.34);
+    g.fillTriangle(size * 0.8, size * 0.4, size * 0.58, size * 0.46, size * 0.6, size * 0.34);
+    g.fillStyle(0xffffff);
+    g.fillCircle(size * 0.33, size * 0.45, 3);
+    g.fillCircle(size * 0.67, size * 0.45, 3);
+
+    g.fillStyle(0x351124);
+    g.fillRoundedRect(size * 0.27, size * 0.61, size * 0.46, size * 0.16, 3);
+    g.fillStyle(0xffffff);
+    g.fillTriangle(size * 0.34, size * 0.61, size * 0.42, size * 0.61, size * 0.38, size * 0.7);
+    g.fillTriangle(size * 0.58, size * 0.61, size * 0.66, size * 0.61, size * 0.62, size * 0.7);
+
+    g.fillStyle(0xff304f);
+    g.fillCircle(size - 8, 9, 8);
+    g.lineStyle(2, 0xffffff, 1);
+    g.strokeCircle(size - 8, 9, 8);
+    g.fillStyle(0xffffff);
+    g.fillRect(size - 9, 4, 2, 7);
+    g.fillCircle(size - 8, 14, 1.5);
   }
 
   private drawRocketEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
@@ -200,6 +221,44 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(size * 0.58, p, 5);
     g.fillStyle(0xffffff);
     g.fillCircle(size * 0.58, p, 2);
+  }
+
+  private drawFleeEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+    const p = size / 2;
+    g.fillStyle(0x0c2b20, 0.65);
+    g.fillEllipse(p, size - 4, size * 0.7, 8);
+    g.fillStyle(0x2b8a5b);
+    g.fillTriangle(4, p, 15, 8, 17, p);
+    g.fillTriangle(4, p, 15, size - 8, 17, p);
+    g.fillStyle(color);
+    g.fillRoundedRect(11, 7, size - 15, size - 14, 12);
+    g.lineStyle(3, 0xdffff0, 0.9);
+    g.strokeRoundedRect(11, 7, size - 15, size - 14, 12);
+    g.fillStyle(0x09291d);
+    g.fillCircle(size * 0.48, size * 0.42, 4);
+    g.fillCircle(size * 0.72, size * 0.42, 4);
+    g.lineStyle(3, 0x09291d, 1);
+    g.lineBetween(size * 0.45, size * 0.7, size * 0.72, size * 0.63);
+    g.fillStyle(0xffffff);
+    g.fillTriangle(size - 2, p, size - 10, p - 5, size - 10, p + 5);
+  }
+
+  private drawOrbitEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {
+    const p = size / 2;
+    g.fillStyle(0x120b2d, 0.7);
+    g.fillCircle(p, p, p - 8);
+    g.lineStyle(5, color, 1);
+    g.strokeCircle(p, p, p - 10);
+    g.lineStyle(2, 0xd8caff, 0.8);
+    g.strokeEllipse(p, p, size - 5, size * 0.48);
+    g.fillStyle(0xb99cff);
+    g.fillCircle(6, p, 5);
+    g.fillCircle(size - 6, p, 5);
+    g.fillStyle(0xffffff);
+    g.fillTriangle(p - 14, p - 5, p - 4, p, p - 14, p + 5);
+    g.fillTriangle(p + 14, p - 5, p + 4, p, p + 14, p + 5);
+    g.lineStyle(4, 0xff5c72, 1);
+    g.lineBetween(p - 12, p + 15, p + 12, p + 15);
   }
 
   private drawTankEnemy(g: Phaser.GameObjects.Graphics, size: number, color: number): void {

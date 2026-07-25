@@ -105,7 +105,7 @@ export interface UpgradeDefinition {
   special?: string;
 }
 
-export type EnemyArchetype = 'normal' | 'wanderer' | 'charger' | 'tank';
+export type EnemyArchetype = 'normal' | 'wanderer' | 'flee' | 'orbiter' | 'charger' | 'tank';
 
 export interface EnemyDefinition {
   id: string;

@@ -4,7 +4,13 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config/constants';
 import { getEnemyDefinition } from '../config/enemies';
 import { Enemy } from '../entities/Enemy';
 import type { RandomSource } from '../services/SeededRandom';
-import type { EnemyWeight, WaveConfig } from '../types/game';
+import type { EnemyWeight, GameDifficulty, WaveConfig } from '../types/game';
+
+const ENEMY_LEVEL_RANGES: Readonly<Record<GameDifficulty, readonly [number, number]>> = {
+  easy: [1, 4],
+  normal: [1, 5],
+  hard: [2, 6],
+};
 
 export class EnemySpawner {
   constructor(
@@ -12,14 +18,23 @@ export class EnemySpawner {
     private readonly group: Phaser.Physics.Arcade.Group,
     private readonly random: RandomSource,
     private readonly difficultyMultiplier: number,
+    private readonly difficulty: GameDifficulty,
   ) {}
 
   spawn(wave: WaveConfig, spawnLimit = wave.spawnCount): void {
     const availableSlots = wave.maxEnemies - this.group.countActive(true);
     const spawnCount = Math.min(spawnLimit, Math.max(0, availableSlots));
+    const [minimumLevel, maximumLevel] = ENEMY_LEVEL_RANGES[this.difficulty];
+    const eligibleEnemies = wave.enemies.filter(({ enemyId }) => {
+      const level = getEnemyDefinition(enemyId).scoreLevel ?? 1;
+      return level >= minimumLevel && level <= maximumLevel;
+    });
+    if (eligibleEnemies.length === 0) {
+      return;
+    }
 
     for (let index = 0; index < spawnCount; index += 1) {
-      const definition = getEnemyDefinition(this.weightedPick(wave.enemies));
+      const definition = getEnemyDefinition(this.weightedPick(eligibleEnemies));
       const position = this.getSpawnPosition(definition.radius);
       const message = this.random.pick(definition.messages);
       this.group.add(

@@ -12,6 +12,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 120,
     contactDamage: 8,
     experienceValue: 1,
+    scoreLevel: 1,
   },
   {
     id: 'okay',
@@ -24,6 +25,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 108,
     contactDamage: 10,
     experienceValue: 2,
+    scoreLevel: 2,
   },
   {
     id: 'wanderer',
@@ -36,6 +38,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 90,
     contactDamage: 9,
     experienceValue: 2,
+    scoreLevel: 2,
   },
   {
     id: 'five-minutes',
@@ -48,6 +51,20 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 94,
     contactDamage: 12,
     experienceValue: 3,
+    scoreLevel: 3,
+  },
+  {
+    id: 'escape-artist',
+    name: '도망치는 세글자',
+    messages: ['못잡지', '여기봐', '메롱함', '도망감'],
+    archetype: 'flee',
+    color: 0x52dc91,
+    radius: 22,
+    maxHp: 30,
+    moveSpeed: 132,
+    contactDamage: 10,
+    experienceValue: 3,
+    scoreLevel: 3,
   },
   {
     id: 'urgent-deploy',
@@ -64,6 +81,7 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     chargeTriggerDistance: 280,
     chargeDuration: 620,
     chargeCooldown: 2_300,
+    scoreLevel: 4,
   },
   {
     id: 'two-hour-meeting',
@@ -76,6 +94,20 @@ export const ENEMY_DEFINITIONS: readonly EnemyDefinition[] = [
     moveSpeed: 58,
     contactDamage: 20,
     experienceValue: 5,
+    scoreLevel: 5,
+  },
+  {
+    id: 'night-shift',
+    name: '여섯글자',
+    messages: ['오늘야근각임', '퇴근은없어요', '내일까지해줘', '회의또잡혔어'],
+    archetype: 'orbiter',
+    color: 0x6846d8,
+    radius: 38,
+    maxHp: 150,
+    moveSpeed: 54,
+    contactDamage: 24,
+    experienceValue: 6,
+    scoreLevel: 6,
   },
   {
     id: 'middle-manager',

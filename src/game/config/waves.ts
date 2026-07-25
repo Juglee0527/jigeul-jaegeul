@@ -29,6 +29,7 @@ export const WAVES: readonly WaveConfig[] = [
       { enemyId: 'okay', weight: 3 },
       { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 2 },
+      { enemyId: 'escape-artist', weight: 1 },
     ],
   },
   {
@@ -45,6 +46,7 @@ export const WAVES: readonly WaveConfig[] = [
       { enemyId: 'okay', weight: 3 },
       { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 2 },
+      { enemyId: 'escape-artist', weight: 2 },
       { enemyId: 'urgent-deploy', weight: 2 },
     ],
   },
@@ -62,8 +64,10 @@ export const WAVES: readonly WaveConfig[] = [
       { enemyId: 'okay', weight: 2 },
       { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 3 },
+      { enemyId: 'escape-artist', weight: 2 },
       { enemyId: 'urgent-deploy', weight: 3 },
       { enemyId: 'two-hour-meeting', weight: 2 },
+      { enemyId: 'night-shift', weight: 1 },
     ],
   },
   {
@@ -80,8 +84,10 @@ export const WAVES: readonly WaveConfig[] = [
       { enemyId: 'okay', weight: 2 },
       { enemyId: 'wanderer', weight: 2 },
       { enemyId: 'five-minutes', weight: 3 },
+      { enemyId: 'escape-artist', weight: 3 },
       { enemyId: 'urgent-deploy', weight: 4 },
       { enemyId: 'two-hour-meeting', weight: 3 },
+      { enemyId: 'night-shift', weight: 2 },
     ],
   },
 ] as const;
